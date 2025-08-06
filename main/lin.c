@@ -111,7 +111,7 @@ void lin_tx_frame(lin_port_t port, lin_msg_t msg) {
 uint8_t lin_rx_frame(lin_port_t port, lin_msg_t msg) {
     lin_send_header(port, msg.id);
     uint8_t rx_buf[msg.len + 1]; // Data + checksum
-    int len = uart_read_bytes(port.uart, rx_buf, sizeof(rx_buf), pdMS_TO_TICKS(4));
+    int len = uart_read_bytes(port.uart, rx_buf, msg.len+1, pdMS_TO_TICKS(4));
     if (len == msg.len + 1) {
         uint8_t checksum = lin_calc_checksum(lin_calc_pid(msg.id), rx_buf, len);
         if (checksum == rx_buf[len]) {
@@ -121,7 +121,7 @@ uint8_t lin_rx_frame(lin_port_t port, lin_msg_t msg) {
             return 0;
         }
     } else {
-        ESP_LOGE(TAG, "RX timeout or wrong length: %d", len);
+ //       ESP_LOGE(TAG, "RX timeout or wrong length: %d", len);
         return 0;
     }
 }
