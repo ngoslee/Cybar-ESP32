@@ -6,6 +6,10 @@
 #include "freertos/event_groups.h"
 #include "driver/uart.h"
 #include "driver/gpio.h"
+#include "soc/gpio_reg.h"
+#include "soc/io_mux_reg.h"
+#include "soc/uart_reg.h"
+#include "soc/uart_struct.h"
 #include "esp_log.h"
 #include "esp_timer.h"
 #include "hal/uart_hal.h"
@@ -67,6 +71,7 @@ void lin_send_break(lin_port_t port) {
     
     // Drive TX pin low for break duration
     gpio_set_level(port.tx_pin, 0);
+    while(gpio_get_level(port.tx_pin) == 1); //wait for function activation
     esp_rom_delay_us(LIN_BREAK_DURATION_US);
     
     // Return to high (idle/delimiter)
@@ -77,7 +82,9 @@ void lin_send_break(lin_port_t port) {
     ESP_ERROR_CHECK(uart_set_pin(port.uart, port.tx_pin, port.rx_pin, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
     
     // Wait for UART to stabilize
-    esp_rom_delay_us(100);
+//     while(gpio_get_level(port.tx_pin) == 0); //wait for function activation
+
+      esp_rom_delay_us(100);
  //   vTaskDelay(pdMS_TO_TICKS(1));
     
  //   ESP_LOGI(TAG, "LIN break completed");
@@ -88,10 +95,10 @@ void lin_send_break(lin_port_t port) {
 void lin_send_header(lin_port_t port, uint8_t id) {
     uint8_t sync = 0x55;
     uint8_t pid = lin_calc_pid(id);
+    uart_flush(port.uart); // Clear RX buffer
     lin_send_break(port);
     uart_write_bytes(port.uart, &sync, 1);
     uart_write_bytes(port.uart, &pid, 1);
-    uart_flush(port.uart); // Clear RX buffer
 }
 
 // LIN TX task (ID 0x0A, 8 bytes)
@@ -110,14 +117,16 @@ void lin_tx_frame(lin_port_t port, lin_msg_t msg) {
 // LIN RX task (ID 0x0B, 5 bytes)
 uint8_t lin_rx_frame(lin_port_t port, lin_msg_t msg) {
     lin_send_header(port, msg.id);
-    uint8_t rx_buf[msg.len + 1]; // Data + checksum
-    int len = uart_read_bytes(port.uart, rx_buf, msg.len+1, pdMS_TO_TICKS(4));
-    if (len == msg.len + 1) {
-        uint8_t checksum = lin_calc_checksum(lin_calc_pid(msg.id), rx_buf, len);
-        if (checksum == rx_buf[len]) {
+ //   ESP_LOGI(TAG, "Header at %lld", esp_timer_get_time());
+    uint8_t rx_buf[msg.len + 4]; // break, sync, pid, Data, checksum
+    int len = uart_read_bytes(port.uart, rx_buf, msg.len+4, pdMS_TO_TICKS(20));
+   //     ESP_LOGI(TAG, "Received at %lld", esp_timer_get_time());
+    if (len == msg.len + 4) {
+        uint8_t checksum = lin_calc_checksum(lin_calc_pid(msg.id), rx_buf+3, msg.len);
+        if (checksum == rx_buf[len - 1]) {
             return len;
         } else {
-            ESP_LOGE(TAG, "RX checksum error");
+            ESP_LOGE(TAG, "RX checksum error got %02X expected %02X", rx_buf[len + 4 - 1], checksum);
             return 0;
         }
     } else {

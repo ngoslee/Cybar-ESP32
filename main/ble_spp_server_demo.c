@@ -24,6 +24,10 @@
 #include "esp_gatt_common_api.h"
 #include "esp_timer.h"
 #include "lin_bar.h"
+#include "lin_truck.h"
+#include "user.h"
+#include "patterns.h"
+
 #if (CONFIG_EXAMPLE_ENABLE_RF_TESTING_CONFIGURATION_COMMAND)
 #include "rf_tesing_configuration_cmd.h"
 #endif // CONFIG_EXAMPLE_ENABLE_RF_TESTING_CONFIGURATION_COMMAND
@@ -623,7 +627,8 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
 #ifdef CONFIG_EXAMPLE_ENABLE_RF_EMC_TEST_MODE
                     ESP_LOG_BUFFER_HEX("RX", p_data->write.value, p_data->write.len);
 #else
-                    uart_write_bytes(UART_NUM_0, (char *)(p_data->write.value), p_data->write.len);
+                    handle_user_input((char *)(p_data->write.value), p_data->write.len);
+                    //uart_write_bytes(UART_NUM_0, (char *)(p_data->write.value), p_data->write.len);
 #endif
                 } else {
                     //TODO:
@@ -741,14 +746,21 @@ static void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_
     } while (0);
 }
 
+
 void app_main(void)
 {
     esp_err_t ret;
     esp_bt_controller_config_t bt_cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
 
-    spp_task_init();
-    bar_lin_init();
+//    sequenceSelect
+    sequenceSelect(SEQ_KITT);
 
+    spp_task_init();
+    ESP_LOGI(GATTS_TABLE_TAG, "SPP task started" );
+    bar_lin_init();
+    ESP_LOGI(GATTS_TABLE_TAG, "Bar task started" );
+ //   truck_lin_init();
+ //   ESP_LOGI(GATTS_TABLE_TAG, "Truck task started" );
     // Initialize NVS
     ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {

@@ -23,6 +23,7 @@ typedef struct {
 void lin_tx_frame(lin_port_t port, lin_msg_t msg);
 uint8_t lin_rx_frame(lin_port_t port, lin_msg_t msg);
 void lin_init(lin_port_t port);
-
+uint8_t lin_calc_pid(uint8_t id);
+uint8_t lin_calc_checksum(uint8_t pid, uint8_t *data, size_t len);
 
 #endif

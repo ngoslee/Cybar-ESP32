@@ -14,6 +14,8 @@
 
 #include "lin.h"
 #include "user.h"
+#include "patterns.h"
+
 #define BAR_LIN_UART_PORT UART_NUM_1
 #define BAR_LIN_TX_PIN GPIO_NUM_4
 #define BAR_LIN_RX_PIN GPIO_NUM_5
@@ -57,16 +59,22 @@ static lin_msg_t bar_rx_msg = {
 
 // Periodic LIN task
 static void bar_lin_task(void *arg) {
-    uint16_t newValues[6];
+    static uint16_t newValues[6];
 
     while (1) {
-        if (update_user_input(newValues) == 0)
-        {
-            bar_lin_set_tx_data(newValues, tx_data_shadow);
-        }
+        update_user_input(newValues); //updates if user sent value
+
+        sequenceNext(newValues); //overrides if mode active
+
+        bar_lin_set_tx_data(newValues, tx_data_shadow); //convert to bitfield
+        ESP_LOGI(TAG, "%d %d %d %d %d %d", newValues[0], newValues[1], newValues[2], newValues[3], newValues[4], newValues[5] );
         lin_tx_frame(bar_lin_port, bar_tx_msg);
+ //           ESP_LOGI(TAG, "Packet sent");
         vTaskDelay(pdMS_TO_TICKS(LIN_MSG_INTERVAL_MS / 2));
-        lin_rx_frame(bar_lin_port, bar_rx_msg);
+
+        if(lin_rx_frame(bar_lin_port, bar_rx_msg)) {
+//            ESP_LOGI(TAG, "Packet received");
+        } 
         vTaskDelay(pdMS_TO_TICKS(LIN_MSG_INTERVAL_MS / 2));
     }
 }
@@ -119,5 +127,5 @@ void bar_lin_init(void) {
     ESP_ERROR_CHECK(uart_driver_install(bar_lin_port.uart, UART_BUF_SIZE, 0, 0, NULL, 0));
     ESP_ERROR_CHECK(uart_param_config(bar_lin_port.uart, &uart_config));
     ESP_ERROR_CHECK(uart_set_pin(bar_lin_port.uart, bar_lin_port.tx_pin, bar_lin_port.rx_pin, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
-    xTaskCreate(bar_lin_task, "bar_lin_task", 4096, NULL, 10, NULL);
+    xTaskCreate(bar_lin_task, "bar_lin_task", 4096, NULL, 11, NULL);
 }
