@@ -753,7 +753,7 @@ void app_main(void)
     esp_bt_controller_config_t bt_cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
 
 //    sequenceSelect
-    sequenceSelect(SEQ_KITT);
+    sequenceSelect(SEQ_IDLE);
 
     spp_task_init();
     ESP_LOGI(GATTS_TABLE_TAG, "SPP task started" );

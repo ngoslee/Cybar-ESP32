@@ -2,6 +2,7 @@
 #include <string.h>
 #include "driver/uart.h"
 #include "lin_bar.h"
+#include "patterns.h"
 #define USER_BUFFER_SIZE 255
 
 static uint8_t userInput[USER_BUFFER_SIZE+1];
@@ -69,7 +70,16 @@ int16_t  update_user_input(uint16_t * newValues)
     }
     if (chunks != 6)
     {
-        uart_write_bytes(UART_NUM_0, userInput, strlen((char*)userInput));
+        if (strcmp((char*)userInput, "kitt") == 0) {
+            sequenceSelect(SEQ_KITT);
+            uart_write_bytes(UART_NUM_0, "KITT MODE", 9);
+
+        } else if (strcmp((char*)userInput, "off") == 0 ) {
+            sequenceSelect(SEQ_IDLE);
+            uart_write_bytes(UART_NUM_0, "IDLE MODE", 9);
+        } else {
+                    uart_write_bytes(UART_NUM_0, userInput, strlen((char*)userInput));
+        }
         userInputFlag = 0;
 
         return -1;
