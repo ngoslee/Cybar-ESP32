@@ -759,8 +759,8 @@ void app_main(void)
     ESP_LOGI(GATTS_TABLE_TAG, "SPP task started" );
     bar_lin_init();
     ESP_LOGI(GATTS_TABLE_TAG, "Bar task started" );
- //   truck_lin_init();
- //   ESP_LOGI(GATTS_TABLE_TAG, "Truck task started" );
+    truck_lin_init();
+    ESP_LOGI(GATTS_TABLE_TAG, "Truck task started" );
     // Initialize NVS
     ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {

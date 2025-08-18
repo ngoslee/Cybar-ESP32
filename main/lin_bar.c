@@ -15,10 +15,11 @@
 #include "lin.h"
 #include "user.h"
 #include "patterns.h"
+#include "lin_truck.h"
 
 #define BAR_LIN_UART_PORT UART_NUM_1
-#define BAR_LIN_TX_PIN GPIO_NUM_4
-#define BAR_LIN_RX_PIN GPIO_NUM_5
+#define BAR_LIN_TX_PIN GPIO_NUM_32
+#define BAR_LIN_RX_PIN GPIO_NUM_33
 #define LIN_BAUD_RATE 19200
 #define LIN_BREAK_DURATION_US 768 // 14 bits at 19200 baud = 0.729 ms
 
@@ -67,12 +68,14 @@ static void bar_lin_task(void *arg) {
         sequenceNext(newValues); //overrides if mode active
 
         bar_lin_set_tx_data(newValues, tx_data_shadow); //convert to bitfield
-        ESP_LOGI(TAG, "%d %d %d %d %d %d", newValues[0], newValues[1], newValues[2], newValues[3], newValues[4], newValues[5] );
+ //       ESP_LOGI(TAG, "%d %d %d %d %d %d", newValues[0], newValues[1], newValues[2], newValues[3], newValues[4], newValues[5] );
         lin_tx_frame(bar_lin_port, bar_tx_msg);
  //           ESP_LOGI(TAG, "Packet sent");
         vTaskDelay(pdMS_TO_TICKS(LIN_MSG_INTERVAL_MS / 2));
 
         if(lin_rx_frame(bar_lin_port, bar_rx_msg)) {
+            truck_lin_set_bar_data_response(bar_rx_msg.data); //pass through data
+
 //            ESP_LOGI(TAG, "Packet received");
         } 
         vTaskDelay(pdMS_TO_TICKS(LIN_MSG_INTERVAL_MS / 2));
@@ -126,6 +129,8 @@ void bar_lin_init(void) {
     };
     ESP_ERROR_CHECK(uart_driver_install(bar_lin_port.uart, UART_BUF_SIZE, 0, 0, NULL, 0));
     ESP_ERROR_CHECK(uart_param_config(bar_lin_port.uart, &uart_config));
+    ESP_ERROR_CHECK(gpio_set_pull_mode(bar_lin_port.rx_pin, GPIO_PULLUP_ONLY));
+
     ESP_ERROR_CHECK(uart_set_pin(bar_lin_port.uart, bar_lin_port.tx_pin, bar_lin_port.rx_pin, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
     xTaskCreate(bar_lin_task, "bar_lin_task", 4096, NULL, 11, NULL);
 }

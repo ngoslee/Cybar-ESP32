@@ -14,10 +14,11 @@
 
 #include "lin.h"
 #include "user.h"
+#include "egg.h"
 
 #define TRUCK_LIN_UART_PORT UART_NUM_2
-#define TRUCK_LIN_TX_PIN GPIO_NUM_32
-#define TRUCK_LIN_RX_PIN GPIO_NUM_33
+#define TRUCK_LIN_TX_PIN GPIO_NUM_22
+#define TRUCK_LIN_RX_PIN GPIO_NUM_23
 #define LIN_BAUD_RATE 19200
 
 #define TRUCK_TO_BAR_ID 0x0A // 8-byte TX
@@ -28,7 +29,10 @@
 #define UART_BUF_SIZE 256
 
 static const char *TAG = "LIN_TRUCK";
-static uint8_t lin_txData[8 + 1] = {0, 1, 2, 3, 4, 5, 6, 7, 8};
+static uint8_t lin_txDataShadow[8 + 1] = {0, 0, 0x80, 0x69, 0x02, 0, 0, 0, 0};
+static uint8_t lin_txData[8 + 1] = {0, 0, 0x80, 0x69, 0x02, 0, 0, 0, 0};
+
+static volatile uint8_t lin_txDataEdit = 0;
 
 /*read data is the 0x0A packet
 respode to 0x0B message*/
@@ -46,11 +50,11 @@ static lin_msg_t truck_to_bar_msg = {
         .data = rx_data_shadow,
     };
 
-static uint8_t tx_data_shadow[BAR_TO_TRUCK_DATA_LEN];
+static uint8_t tx_data_shadow[8+1];
 static lin_msg_t bar_to_truck_msg = {
         .id = BAR_TO_TRUCK_ID,
         .len = BAR_TO_TRUCK_DATA_LEN,
-        .data = lin_txData,
+        .data = tx_data_shadow,
     };  
 
 typedef enum {
@@ -64,6 +68,13 @@ typedef enum {
     LIN_STATE_WAIT_ECHO,
     LIN_STATE_NUM ,
 } linStateEnum_t;
+
+void truck_lin_set_bar_data_response(uint8_t * data)
+{
+    lin_txDataEdit = 1;
+    memcpy(lin_txData, data, BAR_TO_TRUCK_DATA_LEN);
+    lin_txDataEdit = 0;
+}
 
 void truck_lin_task(void * arg)
 {
@@ -162,10 +173,14 @@ void truck_lin_task(void * arg)
                         //        ESP_LOGI(TAG, "ID at %lld", esp_timer_get_time());
                                 txByteCount = BAR_TO_TRUCK_DATA_LEN;
                                 //get data 
-                                lin_checksum = lin_calc_checksum(lin_pid, lin_txData, txByteCount);
-                                lin_txData[txByteCount] = lin_checksum;
+                                if (lin_txDataEdit == 0)
+                                {
+                                    memcpy(lin_txDataShadow, lin_txData, BAR_TO_TRUCK_DATA_LEN);
+                                }
+                                lin_checksum = lin_calc_checksum(lin_pid, lin_txDataShadow, txByteCount);
+                                lin_txDataShadow[txByteCount] = lin_checksum;
                                 txEchoCount = txByteCount + 1;
-                                uart_write_bytes(TRUCK_LIN_UART_PORT, lin_txData, txEchoCount);     
+                                uart_write_bytes(TRUCK_LIN_UART_PORT, lin_txDataShadow, txEchoCount);     
                        //         ESP_LOGI(TAG, "Written by at %lld", esp_timer_get_time());
                        //         ESP_LOGI(TAG, "Checksum is %02X",lin_checksum);                                 
                                 state = LIN_STATE_WAIT_ECHO;  
@@ -190,7 +205,8 @@ void truck_lin_task(void * arg)
                             break;
                         } else {
                             //handle received data
-                            ESP_LOGI(TAG, "Packet recevied"); 
+                          //  ESP_LOGI(TAG, "Packet recevied"); 
+                            egg_msg_handler(lin_data, rxByteCount);
                         }
 
                         state = LIN_STATE_WAIT_BREAK;
@@ -199,7 +215,7 @@ void truck_lin_task(void * arg)
                     case LIN_STATE_WAIT_ECHO:
                         txEchoCount--;
                         if (txEchoCount == 0) {
-                            ESP_LOGI(TAG, "Packet sent"); 
+                            //ESP_LOGI(TAG, "Packet sent"); 
                             state = LIN_STATE_WAIT_BREAK;
                         }
                         break;
@@ -241,6 +257,7 @@ void truck_lin_init(void) {
     ESP_ERROR_CHECK(uart_driver_install(truck_lin_port.uart, UART_BUF_SIZE, UART_BUF_SIZE, 16, &truck_uart_queue, ESP_INTR_FLAG_LEVEL2));
     ESP_LOGI(TAG, "Driver installed"); 
     ESP_ERROR_CHECK(uart_param_config(truck_lin_port.uart, &uart_config));
+    ESP_ERROR_CHECK(gpio_set_pull_mode(truck_lin_port.rx_pin, GPIO_PULLUP_ONLY));
     ESP_ERROR_CHECK(uart_set_rx_full_threshold(truck_lin_port.uart, 1)); // Trigger interrupt after 1 byte
     ESP_LOGI(TAG, "Params configured"); 
     ESP_ERROR_CHECK(uart_set_pin(truck_lin_port.uart, truck_lin_port.tx_pin, truck_lin_port.rx_pin, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
