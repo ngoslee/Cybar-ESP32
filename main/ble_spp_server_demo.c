@@ -27,6 +27,7 @@
 #include "lin_truck.h"
 #include "user.h"
 #include "patterns.h"
+#include "diag_port.h"
 
 #if (CONFIG_EXAMPLE_ENABLE_RF_TESTING_CONFIGURATION_COMMAND)
 #include "rf_tesing_configuration_cmd.h"
@@ -142,7 +143,7 @@ static esp_ble_adv_data_t scan_rsp_data = {
 static uint16_t spp_mtu_size = SPP_GATT_MTU_SIZE;
 static uint16_t spp_conn_id = 0xffff;
 static esp_gatt_if_t spp_gatts_if = 0xff;
-QueueHandle_t spp_uart_queue = NULL;
+
 static QueueHandle_t cmd_cmd_queue = NULL;
 
 QueueHandle_t bar_uart_queue = NULL;
@@ -371,122 +372,11 @@ static void print_write_buffer(void)
     temp_spp_recv_data_node_p1 = SppRecvDataBuff.first_node;
 
     while (temp_spp_recv_data_node_p1 != NULL) {
-        uart_write_bytes(UART_NUM_0, (char *)(temp_spp_recv_data_node_p1->node_buff), temp_spp_recv_data_node_p1->len);
+        diag_port_write((char *)(temp_spp_recv_data_node_p1->node_buff), temp_spp_recv_data_node_p1->len);
+
         temp_spp_recv_data_node_p1 = temp_spp_recv_data_node_p1->next_node;
     }
 }
-
-void uart_task(void *pvParameters)
-{
-    uart_event_t event;
-    uint8_t total_num = 0;
-    uint8_t current_num = 0;
-
-    for (;;) {
-        //Waiting for UART event.
-        if (xQueueReceive(spp_uart_queue, (void * )&event, (TickType_t)portMAX_DELAY)) {
-            switch (event.type) {
-            //Event of UART receiving data
-            case UART_DATA:
-                if ((event.size)&&(is_connected)) {
-                    uint8_t * temp = NULL;
-                    uint8_t * ntf_value_p = NULL;
-#ifdef SUPPORT_HEARTBEAT
-                    if(!enable_heart_ntf){
-                        ESP_LOGE(GATTS_TABLE_TAG, "%s do not enable heartbeat Notify", __func__);
-                        break;
-                    }
-#endif
-                    if(!enable_data_ntf){
-                        ESP_LOGE(GATTS_TABLE_TAG, "%s do not enable data Notify", __func__);
-                        break;
-                    }
-                    temp = (uint8_t *)malloc(sizeof(uint8_t)*event.size);
-                    if (temp == NULL) {
-                        ESP_LOGE(GATTS_TABLE_TAG, "%s malloc.1 failed", __func__);
-                        break;
-                    }
-                    uart_read_bytes(UART_NUM_0, temp, event.size, portMAX_DELAY);
-                    if (event.size <= (spp_mtu_size - 3)) {
-#ifdef CONFIG_EXAMPLE_ENABLE_RF_EMC_TEST_MODE
-                        ESP_LOG_BUFFER_HEX("TX", temp, event.size);
-#endif
-#ifdef CONFIG_EXAMPLE_SPP_THROUGHPUT
-                        if(esp_ble_get_cur_sendable_packets_num(spp_conn_id) > 0) {
-                            esp_ble_gatts_send_indicate(spp_gatts_if, spp_conn_id, spp_handle_table[SPP_IDX_SPP_DATA_NTY_VAL], event.size, temp, false);
-                        } else {
-                            //Add the vTaskDelay to prevent this task from consuming the CPU all the time, causing low-priority tasks to not be executed at all.
-                            vTaskDelay(10 / portTICK_PERIOD_MS);
-                        }
-#else
-                        esp_ble_gatts_send_indicate(spp_gatts_if, spp_conn_id, spp_handle_table[SPP_IDX_SPP_DATA_NTY_VAL], event.size, temp, true);
-#endif
-                    } else if (event.size > (spp_mtu_size - 3)) {
-                        if ((event.size % (spp_mtu_size - 7)) == 0) {
-                            total_num = event.size / (spp_mtu_size - 7);
-                        } else {
-                            total_num = event.size / (spp_mtu_size - 7) + 1;
-                        }
-                        current_num = 1;
-                        ntf_value_p = (uint8_t *)malloc((spp_mtu_size-3)*sizeof(uint8_t));
-                        if (ntf_value_p == NULL) {
-                            ESP_LOGE(GATTS_TABLE_TAG, "%s malloc.2 failed", __func__);
-                            free(temp);
-                            break;
-                        }
-                        while (current_num <= total_num) {
-                            if (current_num < total_num) {
-                                ntf_value_p[0] = '#';
-                                ntf_value_p[1] = '#';
-                                ntf_value_p[2] = total_num;
-                                ntf_value_p[3] = current_num;
-                                memcpy(ntf_value_p + 4, temp + (current_num - 1)*(spp_mtu_size-7), (spp_mtu_size-7));
-                                esp_ble_gatts_send_indicate(spp_gatts_if, spp_conn_id, spp_handle_table[SPP_IDX_SPP_DATA_NTY_VAL], (spp_mtu_size-3), ntf_value_p, false);
-                            } else if(current_num == total_num) {
-                                ntf_value_p[0] = '#';
-                                ntf_value_p[1] = '#';
-                                ntf_value_p[2] = total_num;
-                                ntf_value_p[3] = current_num;
-                                memcpy(ntf_value_p + 4, temp + (current_num - 1)*(spp_mtu_size-7), (event.size - (current_num - 1)*(spp_mtu_size - 7)));
-                                esp_ble_gatts_send_indicate(spp_gatts_if, spp_conn_id, spp_handle_table[SPP_IDX_SPP_DATA_NTY_VAL], (event.size - (current_num - 1)*(spp_mtu_size - 7) + 4), ntf_value_p, false);
-                            }
-                            vTaskDelay(20 / portTICK_PERIOD_MS);
-                            current_num++;
-                        }
-                        free(ntf_value_p);
-                    }
-                    free(temp);
-                }
-                break;
-            default:
-                break;
-            }
-        }
-    }
-    vTaskDelete(NULL);
-}
-
-static void spp_uart_init(void)
-{
-    uart_config_t uart_config = {
-        .baud_rate = 115200,
-        .data_bits = UART_DATA_8_BITS,
-        .parity = UART_PARITY_DISABLE,
-        .stop_bits = UART_STOP_BITS_1,
-        .flow_ctrl = UART_HW_FLOWCTRL_RTS,
-        .rx_flow_ctrl_thresh = 124,
-        .source_clk = UART_SCLK_DEFAULT,
-    };
-
-    //Install UART driver, and get the queue.
-    uart_driver_install(UART_NUM_0, 4096, 8192, 10, &spp_uart_queue,0);
-    //Set UART parameters
-    uart_param_config(UART_NUM_0, &uart_config);
-    //Set UART pins
-    uart_set_pin(UART_NUM_0, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
-    xTaskCreate(uart_task, "uTask", 4096, (void*)UART_NUM_0, 8, NULL);
-}
-
 
 
 void spp_cmd_task(void * arg)
@@ -817,4 +707,66 @@ void app_main(void)
     }
 
     return;
+}
+
+
+bool spp_is_connected(void) {
+    return(is_connected);
+}
+
+void spp_send(uint8_t * data_ptr, size_t len) {
+    uint8_t total_num = 0;
+    uint8_t current_num = 0;
+    uint8_t * ntf_value_p = NULL;
+
+    if(!enable_data_ntf){
+        ESP_LOGE(GATTS_TABLE_TAG, "%s do not enable data Notify", __func__);
+        return;
+    }
+
+    if (len <= (spp_mtu_size - 3)) {
+
+#ifdef CONFIG_EXAMPLE_SPP_THROUGHPUT
+        if(esp_ble_get_cur_sendable_packets_num(spp_conn_id) > 0) {
+            esp_ble_gatts_send_indicate(spp_gatts_if, spp_conn_id, spp_handle_table[SPP_IDX_SPP_DATA_NTY_VAL], len, data_ptr, false);
+        } else {
+            //Add the vTaskDelay to prevent this task from consuming the CPU all the time, causing low-priority tasks to not be executed at all.
+            vTaskDelay(10 / portTICK_PERIOD_MS);
+        }
+#else
+        esp_ble_gatts_send_indicate(spp_gatts_if, spp_conn_id, spp_handle_table[SPP_IDX_SPP_DATA_NTY_VAL], len, data_ptr, true);
+#endif
+    } else if (len > (spp_mtu_size - 3)) {
+        if ((len % (spp_mtu_size - 7)) == 0) {
+            total_num = len / (spp_mtu_size - 7);
+        } else {
+            total_num = len / (spp_mtu_size - 7) + 1;
+        }
+        current_num = 1;
+        ntf_value_p = (uint8_t *)malloc((spp_mtu_size-3)*sizeof(uint8_t));
+        if (ntf_value_p == NULL) {
+            ESP_LOGE(GATTS_TABLE_TAG, "%s malloc.2 failed", __func__);
+            return;
+        }
+        while (current_num <= total_num) {
+            if (current_num < total_num) {
+                ntf_value_p[0] = '#';
+                ntf_value_p[1] = '#';
+                ntf_value_p[2] = total_num;
+                ntf_value_p[3] = current_num;
+                memcpy(ntf_value_p + 4, data_ptr + (current_num - 1)*(spp_mtu_size-7), (spp_mtu_size-7));
+                esp_ble_gatts_send_indicate(spp_gatts_if, spp_conn_id, spp_handle_table[SPP_IDX_SPP_DATA_NTY_VAL], (spp_mtu_size-3), ntf_value_p, false);
+            } else if(current_num == total_num) {
+                ntf_value_p[0] = '#';
+                ntf_value_p[1] = '#';
+                ntf_value_p[2] = total_num;
+                ntf_value_p[3] = current_num;
+                memcpy(ntf_value_p + 4, data_ptr + (current_num - 1)*(spp_mtu_size-7), (len - (current_num - 1)*(spp_mtu_size - 7)));
+                esp_ble_gatts_send_indicate(spp_gatts_if, spp_conn_id, spp_handle_table[SPP_IDX_SPP_DATA_NTY_VAL], (len - (current_num - 1)*(spp_mtu_size - 7) + 4), ntf_value_p, false);
+            }
+            vTaskDelay(20 / portTICK_PERIOD_MS);
+            current_num++;
+        }
+        free(ntf_value_p);
+    }
 }

@@ -5,6 +5,6 @@ list(APPEND srcs
      "rf_tesing_configuration_cmd.c")
 endif()
 
-idf_component_register(SRCS "lin_truck.c" "user.c" "lin.c" "lin_bar.c" "patterns.c" "${srcs}"
+idf_component_register(SRCS "diag_port.c" "lin_truck.c" "user.c" "lin.c" "lin_bar.c" "patterns.c" "egg.c" "${srcs}"
                     PRIV_REQUIRES bt nvs_flash esp_driver_uart console driver
                     INCLUDE_DIRS ".")

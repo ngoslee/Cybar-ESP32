@@ -206,7 +206,7 @@ void truck_lin_task(void * arg)
                         } else {
                             //handle received data
                           //  ESP_LOGI(TAG, "Packet recevied"); 
-                            egg_msg_handler(lin_data, rxByteCount);
+                            egg_msg_handler(lin_data, rxByteCount); 
                         }
 
                         state = LIN_STATE_WAIT_BREAK;

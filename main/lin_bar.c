@@ -58,11 +58,34 @@ static lin_msg_t bar_rx_msg = {
         .data = rx_data,
     };  
 
+static lin_bar_command_t truck_cmd;    
+static volatile uint8_t truck_cmd_flag = 0;
+
+void bar_lin_truck_cmd(uint8_t * cmd) {
+    if (truck_cmd_flag) return;
+    memcpy(truck_cmd.bytes, cmd, 8);
+    truck_cmd_flag = 1;
+}
+
+void truck_input(uint16_t * data) {
+    if (!truck_cmd_flag) return;
+    data[0] = truck_cmd.values.value0;
+    data[1] = truck_cmd.values.value1;
+    data[2] = truck_cmd.values.value2;
+    data[3] = truck_cmd.values.value3;
+    data[4] = truck_cmd.values.value4;
+    data[5] = truck_cmd.values.value5;
+
+    truck_cmd_flag = 0;    
+}
+
 // Periodic LIN task
 static void bar_lin_task(void *arg) {
     static uint16_t newValues[6];
 
+
     while (1) {
+        truck_input(newValues); //updates if truck sent value
         update_user_input(newValues); //updates if user sent value
 
         sequenceNext(newValues); //overrides if mode active
@@ -96,7 +119,7 @@ void bar_lin_set_tx_data(uint16_t *data, uint8_t * msg) {
     }
     for (v=0; v< 6; v++)
     {
-        vTaskDelay(1 / portTICK_PERIOD_MS);
+ //       vTaskDelay(1 / portTICK_PERIOD_MS);
  //       uart_write_bytes(UART_NUM_0, "Byte ", 5);
         in_mask = 0x0001;
         for (i=0; i< 10; i++)

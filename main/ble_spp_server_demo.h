@@ -35,3 +35,7 @@ enum{
 
     SPP_IDX_NB,
 };
+
+bool spp_is_connected(void);
+void spp_send(uint8_t * data_ptr, size_t len);
+
