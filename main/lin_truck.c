@@ -29,8 +29,9 @@
 #define UART_BUF_SIZE 256
 
 static const char *TAG = "LIN_TRUCK";
-static uint8_t lin_txDataShadow[8 + 1] = {0, 0, 0x80, 0x69, 0x02, 0, 0, 0, 0};
-static uint8_t lin_txData[8 + 1] = {0, 0, 0x80, 0x69, 0x02, 0, 0, 0, 0};
+//00 00 60 9D 01
+static uint8_t lin_txDataShadow[8 + 1] = {0, 0, 0x60, 0x9D, 0x01, 0, 0, 0, 0};
+static uint8_t lin_txData[8 + 1] = {0, 0, 0x60, 0x9D, 0x01, 0, 0, 0, 0};
 
 static volatile uint8_t lin_txDataEdit = 0;
 
@@ -69,10 +70,16 @@ typedef enum {
     LIN_STATE_NUM ,
 } linStateEnum_t;
 
+static uint8_t data_prev[BAR_TO_TRUCK_DATA_LEN] = {0};
+
 void truck_lin_set_bar_data_response(uint8_t * data)
 {
     lin_txDataEdit = 1;
     memcpy(lin_txData, data, BAR_TO_TRUCK_DATA_LEN);
+    if (memcmp(data_prev, data, BAR_TO_TRUCK_DATA_LEN)) {
+        ESP_LOGI(TAG, "Bar resp: %02X %02X %02X %02X %02X", data[0], data[1], data[2], data[3], data[4]);
+        memcpy(data_prev, data, BAR_TO_TRUCK_DATA_LEN);
+    }
     lin_txDataEdit = 0;
 }
 
@@ -258,6 +265,7 @@ void truck_lin_init(void) {
     ESP_LOGI(TAG, "Driver installed"); 
     ESP_ERROR_CHECK(uart_param_config(truck_lin_port.uart, &uart_config));
     ESP_ERROR_CHECK(gpio_set_pull_mode(truck_lin_port.rx_pin, GPIO_PULLUP_ONLY));
+    ESP_ERROR_CHECK(gpio_set_pull_mode(truck_lin_port.tx_pin, GPIO_PULLUP_ONLY));
     ESP_ERROR_CHECK(uart_set_rx_full_threshold(truck_lin_port.uart, 1)); // Trigger interrupt after 1 byte
     ESP_LOGI(TAG, "Params configured"); 
     ESP_ERROR_CHECK(uart_set_pin(truck_lin_port.uart, truck_lin_port.tx_pin, truck_lin_port.rx_pin, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));

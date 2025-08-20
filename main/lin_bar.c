@@ -24,17 +24,17 @@
 #define LIN_BREAK_DURATION_US 768 // 14 bits at 19200 baud = 0.729 ms
 
 #define LIN_MSG_INTERVAL_MS 20
-#define BAR_LIN_TX_ID 0x0A // 8-byte TX
-#define BAR_LIN_RX_ID 0x0B // 5-byte RX
+#define TRUCK_TO_BAR_ID 0x0A // 8-byte TX
+#define BAR_TO_TRUCK_ID 0x0B // 5-byte RX
 
-#define BAR_LIN_TX_DATA_LEN 8
-#define BAR_LIN_RX_DATA_LEN 5
+#define TRUCK_TO_BAR_DATA_LEN 8
+#define BAR_TO_TRUCK_DATA_LEN 5
 #define UART_BUF_SIZE 256
 
 void bar_lin_set_tx_data(uint16_t *data, uint8_t * msg);
 static const char *TAG = "LIN_BAR";
-static uint8_t tx_data[BAR_LIN_TX_DATA_LEN] = {0}; // Buffer for TX data
-static uint8_t tx_data_shadow[BAR_LIN_TX_DATA_LEN] = {0}; // Buffer for TX data
+static uint8_t tx_data[TRUCK_TO_BAR_DATA_LEN] = {0}; // Buffer for TX data
+static uint8_t tx_data_shadow[TRUCK_TO_BAR_DATA_LEN] = {0}; // Buffer for TX data
 
 static void (*rx_callback)(uint8_t *data, size_t len) = NULL;
 
@@ -47,14 +47,14 @@ static lin_port_t bar_lin_port = { .uart = BAR_LIN_UART_PORT,
 
 static uint8_t rx_data[8]; //max length
 static lin_msg_t bar_tx_msg = {
-        .id = BAR_LIN_TX_ID,
-        .len = BAR_LIN_TX_DATA_LEN,
+        .id = TRUCK_TO_BAR_ID,
+        .len = TRUCK_TO_BAR_DATA_LEN,
         .data = tx_data_shadow,
     };
 
 static lin_msg_t bar_rx_msg = {
-        .id = BAR_LIN_RX_ID,
-        .len = BAR_LIN_RX_DATA_LEN,
+        .id = BAR_TO_TRUCK_ID,
+        .len = BAR_TO_TRUCK_DATA_LEN,
         .data = rx_data,
     };  
 
@@ -113,7 +113,7 @@ void bar_lin_set_tx_data(uint16_t *data, uint8_t * msg) {
     bitcount = 0;
 
     //format is value every 10 bits
-    for (i=0; i< BAR_LIN_TX_DATA_LEN; i++)
+    for (i=0; i< TRUCK_TO_BAR_DATA_LEN; i++)
     {
         msg[i] = 0;
     }
@@ -141,6 +141,8 @@ void lin_register_rx_callback(void (*callback)(uint8_t *data, size_t len)) {
 
 // Initialize UART and LIN
 void bar_lin_init(void) {
+    lin_init(&bar_lin_port);
+    #if 0
     uart_config_t uart_config = {
         .baud_rate = LIN_BAUD_RATE,
         .data_bits = UART_DATA_8_BITS,
@@ -153,7 +155,8 @@ void bar_lin_init(void) {
     ESP_ERROR_CHECK(uart_driver_install(bar_lin_port.uart, UART_BUF_SIZE, 0, 0, NULL, 0));
     ESP_ERROR_CHECK(uart_param_config(bar_lin_port.uart, &uart_config));
     ESP_ERROR_CHECK(gpio_set_pull_mode(bar_lin_port.rx_pin, GPIO_PULLUP_ONLY));
-
+    ESP_ERROR_CHECK(gpio_set_pull_mode(bar_lin_port.tx_pin, GPIO_PULLUP_ONLY));
     ESP_ERROR_CHECK(uart_set_pin(bar_lin_port.uart, bar_lin_port.tx_pin, bar_lin_port.rx_pin, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
+    #endif
     xTaskCreate(bar_lin_task, "bar_lin_task", 4096, NULL, 11, NULL);
 }

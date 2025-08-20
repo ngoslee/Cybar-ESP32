@@ -14,6 +14,7 @@ typedef struct {
     uint8_t uart;
     uint8_t tx_pin;
     uint8_t rx_pin;
+    esp_timer_handle_t one_shot_timer;
 } lin_port_t;
 typedef struct {
     uint8_t id;
@@ -22,7 +23,7 @@ typedef struct {
 } lin_msg_t;
 void lin_tx_frame(lin_port_t port, lin_msg_t msg);
 uint8_t lin_rx_frame(lin_port_t port, lin_msg_t msg);
-void lin_init(lin_port_t port);
+void lin_init(lin_port_t * port);
 uint8_t lin_calc_pid(uint8_t id);
 uint8_t lin_calc_checksum(uint8_t pid, uint8_t *data, size_t len);
 

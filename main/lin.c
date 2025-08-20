@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <string.h>
 #include "esp_mac.h"
+#include <driver/gptimer.h>
+#include <esp_err.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/event_groups.h"
@@ -28,7 +30,7 @@
 
 #define CONFIG_LIN_TRANSCEIVER_ECHO 1
 
-static const char *TAG = "LIN_MASTER";
+static const char *TAG = "LIN_BAR";
 
 // Calculate LIN enhanced checksum (over PID + data)
 uint8_t lin_calc_checksum(uint8_t pid, uint8_t *data, size_t len) {
@@ -47,44 +49,74 @@ uint8_t lin_calc_pid(uint8_t id) {
     return (id & 0x3F) | (p0 << 6) | (p1 << 7);
 }
 
+//gpio_num_t break_pin;
+void timer_callback(void* arg) {
+    // This callback runs in ISR context, keep it short and avoid blocking operations.
+      // Set pin back to high
+    lin_port_t * port = (lin_port_t *) arg;
+    gpio_num_t break_pin = port->tx_pin;
+    gpio_set_level(break_pin, 1);
+ //   ESP_LOGI(TAG, " pin %d set high", break_pin);
+}
+
+
 
 // Send LIN break by driving TX pin low
 void lin_send_break(lin_port_t port) {
  //   ESP_LOGI(TAG, "Starting LIN break");
 
     // Disable UART TX signal to avoid interference
-    ESP_ERROR_CHECK(uart_set_pin(port.uart, -1, port.rx_pin, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
+    gpio_set_level(port.tx_pin, 0);
+    gpio_set_direction(port.tx_pin, GPIO_MODE_OUTPUT);
+    //    ESP_ERROR_CHECK(uart_set_pin(port.uart, -1, port.rx_pin, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
 
+    /*
     // Configure TX pin as GPIO output
     gpio_config_t io_conf = {
         .pin_bit_mask = (1ULL << port.tx_pin),
         .mode = GPIO_MODE_OUTPUT,
-        .pull_up_en = GPIO_PULLUP_DISABLE,
+        .pull_up_en = GPIO_PULLUP_ENABLE,
         .pull_down_en = GPIO_PULLDOWN_DISABLE,
-        .intr_type = GPIO_INTR_DISABLE
+        .intr_type = GPIO_INTR_DISABLE,
+        
     };
     ESP_ERROR_CHECK(gpio_config(&io_conf));
-    
+*/
+   #if 1
+   //generate_800us_pulse(port.tx_pin);
+  // break_pin = port.tx_pin;
+ //    ESP_LOGI(TAG, "Oneshot call: %p", port.one_shot_timer);
+     gpio_set_level(port.tx_pin, 0);
+    //       esp_rom_delay_us(100);
+  //  esp_timer_stop(port.one_shot_timer);
+    ESP_ERROR_CHECK(esp_timer_start_once(port.one_shot_timer, 800)); // 2 seconds in microseconds
+  //  while(gpio_get_level(port.tx_pin) == 0) ; //wait for timout
+   while(esp_timer_is_active(port.one_shot_timer)){};
+
+
+   #else
     // Ensure idle high first
  //   gpio_set_level(LIN_TX_PIN, 1);
  //   esp_rom_delay_us(100); // Short delay for stability
     
     // Drive TX pin low for break duration
     gpio_set_level(port.tx_pin, 0);
+   esp_rom_delay_us(100); // Short delimiter ensure
     while(gpio_get_level(port.tx_pin) == 1); //wait for function activation
     esp_rom_delay_us(LIN_BREAK_DURATION_US);
     
     // Return to high (idle/delimiter)
     gpio_set_level(port.tx_pin, 1);
- //   esp_rom_delay_us(100); // Short delimiter ensure
+    esp_rom_delay_us(100); // Short delimiter ensure
+    #endif
 
     // Restore UART TX pin
     ESP_ERROR_CHECK(uart_set_pin(port.uart, port.tx_pin, port.rx_pin, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
     
     // Wait for UART to stabilize
+       esp_rom_delay_us(100); //deliminter 
 //     while(gpio_get_level(port.tx_pin) == 0); //wait for function activation
 
-      esp_rom_delay_us(100);
  //   vTaskDelay(pdMS_TO_TICKS(1));
     
  //   ESP_LOGI(TAG, "LIN break completed");
@@ -124,19 +156,20 @@ uint8_t lin_rx_frame(lin_port_t port, lin_msg_t msg) {
     if (len == msg.len + 4) {
         uint8_t checksum = lin_calc_checksum(lin_calc_pid(msg.id), rx_buf+3, msg.len);
         if (checksum == rx_buf[len - 1]) {
+            memcpy(msg.data, rx_buf+3, msg.len);
             return len;
         } else {
             ESP_LOGE(TAG, "RX checksum error got %02X expected %02X", rx_buf[len + 4 - 1], checksum);
             return 0;
         }
     } else {
- //       ESP_LOGE(TAG, "RX timeout or wrong length: %d", len);
+        ESP_LOGE(TAG, "RX timeout or wrong length: %d", len);
         return 0;
     }
 }
 
 // Initialize UART and LIN
-void lin_init(lin_port_t port) {
+void lin_init(lin_port_t *port) {
     uart_config_t uart_config = {
         .baud_rate = LIN_BAUD_RATE,
         .data_bits = UART_DATA_8_BITS,
@@ -146,7 +179,21 @@ void lin_init(lin_port_t port) {
         .rx_flow_ctrl_thresh = 0,
         .source_clk = UART_SCLK_DEFAULT,
     };
-    ESP_ERROR_CHECK(uart_driver_install(port.uart, UART_BUF_SIZE, 0, 0, NULL, 0));
-    ESP_ERROR_CHECK(uart_param_config(port.uart, &uart_config));
-    ESP_ERROR_CHECK(uart_set_pin(port.uart, port.tx_pin, port.rx_pin, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
+    ESP_ERROR_CHECK(uart_driver_install(port->uart, UART_BUF_SIZE, 0, 0, NULL, 0));
+    ESP_ERROR_CHECK(uart_param_config(port->uart, &uart_config));
+    ESP_ERROR_CHECK(gpio_set_pull_mode(port->rx_pin, GPIO_PULLUP_ONLY));
+    ESP_ERROR_CHECK(gpio_set_pull_mode(port->tx_pin, GPIO_PULLUP_ONLY));
+    ESP_ERROR_CHECK(uart_set_pin(port->uart, port->tx_pin, port->rx_pin, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
+    esp_timer_create_args_t timer_args = {
+        .callback = &timer_callback,
+        .name = "one_shot_timer",
+        .arg = (void *) port,        
+    };
+
+    ESP_ERROR_CHECK(esp_timer_create(&timer_args, &port->one_shot_timer));
+    //set at oneshot
+  //  ESP_ERROR_CHECK(esp_timer_start_once(port->one_shot_timer, 800)); // 2 seconds in microseconds
+  //  esp_timer_stop(port->one_shot_timer);
+
+ //   ESP_LOGI(TAG, "Oneshot: %p", port->one_shot_timer);
 }
