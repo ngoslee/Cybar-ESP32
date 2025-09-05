@@ -24,11 +24,6 @@
 #define LIN_BREAK_DURATION_US 768 // 14 bits at 19200 baud = 0.729 ms
 
 #define LIN_MSG_INTERVAL_MS 20
-#define TRUCK_TO_BAR_ID 0x0A // 8-byte TX
-#define BAR_TO_TRUCK_ID 0x0B // 5-byte RX
-
-#define TRUCK_TO_BAR_DATA_LEN 8
-#define BAR_TO_TRUCK_DATA_LEN 5
 #define UART_BUF_SIZE 256
 
 void bar_lin_set_tx_data(uint16_t *data, uint8_t * msg);
@@ -60,11 +55,14 @@ static lin_msg_t bar_rx_msg = {
 
 static lin_bar_command_t truck_cmd;    
 static volatile uint8_t truck_cmd_flag = 0;
-
+static lin_bar_command_t truck_cmd_prev;
 void bar_lin_truck_cmd(uint8_t * cmd) {
     if (truck_cmd_flag) return;
-    memcpy(truck_cmd.bytes, cmd, 8);
-    truck_cmd_flag = 1;
+    if (memcmp(truck_cmd_prev.bytes, cmd, 8)) {
+        memcpy(truck_cmd_prev.bytes, cmd, 8);
+        memcpy(truck_cmd.bytes, cmd, 8);
+        truck_cmd_flag = 1;
+    }
 }
 
 void truck_input(uint16_t * data) {
@@ -82,15 +80,16 @@ void truck_input(uint16_t * data) {
 // Periodic LIN task
 static void bar_lin_task(void *arg) {
     static uint16_t newValues[6];
+    uint16_t values_final[6];
 
 
     while (1) {
         truck_input(newValues); //updates if truck sent value
         update_user_input(newValues); //updates if user sent value
 
-        sequenceNext(newValues); //overrides if mode active
+        sequenceNext(newValues, values_final); //overrides if mode active
 
-        bar_lin_set_tx_data(newValues, tx_data_shadow); //convert to bitfield
+        bar_lin_set_tx_data(values_final, tx_data_shadow); //convert to bitfield
  //       ESP_LOGI(TAG, "%d %d %d %d %d %d", newValues[0], newValues[1], newValues[2], newValues[3], newValues[4], newValues[5] );
         lin_tx_frame(bar_lin_port, bar_tx_msg);
  //           ESP_LOGI(TAG, "Packet sent");

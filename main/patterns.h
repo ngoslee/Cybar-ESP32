@@ -10,10 +10,11 @@ typedef enum {
     SEQ_LEFT,
     SEQ_RIGHT,
     SEQ_SWEEP,
+    SEQ_WIG_WAG,
     SEQ_COUNT,
 } seq_enum_t;
 
-void sequenceNext(uint16_t * values);
+void sequenceNext(uint16_t * values,  uint16_t * newValues);
 void sequenceSelect(seq_enum_t newSequence);
 
 

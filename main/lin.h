@@ -5,6 +5,12 @@
 #include "esp_mac.h"
 #include "freertos/FreeRTOS.h"
 
+#define TRUCK_TO_BAR_ID 0x0A // 8-byte TX
+#define BAR_TO_TRUCK_ID 0x0B // 5-byte RX
+
+#define TRUCK_TO_BAR_DATA_LEN 8
+#define BAR_TO_TRUCK_DATA_LEN 5
+
 //uint8_t lin_calc_checksum(uint8_t pid, uint8_t *data, size_t len);
 //uint8_t lin_calc_pid(uint8_t id);
 //static void lin_send_break(uint8_t port, uint8_t tx_pin, uint8_t rx_pin) ;

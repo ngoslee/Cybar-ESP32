@@ -39,7 +39,7 @@ int16_t  update_user_input(uint16_t * newValues)
     int i =0;
     uint16_t value = 0;
     uint16_t values[6] = {0, 0, 0, 0, 0, 0};
-    
+    static uint16_t user_prev[6];
     if (userInputFlag == 0) return 1;
     
     while ((i < USER_BUFFER_SIZE) && userInput[i] && (chunks < 6))
@@ -84,8 +84,13 @@ int16_t  update_user_input(uint16_t * newValues)
 
         return -1;
     }
+    //update on change
     userInputFlag = 0;
-    memcpy(newValues, values, sizeof(values));
+    if (memcpy(user_prev, values, sizeof(values))) {
+        memcpy(user_prev, values, sizeof(values));
+        memcpy(newValues, values, sizeof(values));
+
+    }
     return 0;
 //    bar_lin_set_tx_data(values);
     #if 0
