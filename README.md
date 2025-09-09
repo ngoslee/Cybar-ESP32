@@ -7,7 +7,7 @@ UI control:
 Turn on lightbar
 Set brightness to 42%
 Within two seconds, set brightness to 69% WITHOUT PASSING THROUGH THE 50-59% RANGE
-So get 42%, then tap near 69 and swipw to it
+So get 42%, then tap near 69 and swipe to it
 
 Modes:
 Flood: scanner
