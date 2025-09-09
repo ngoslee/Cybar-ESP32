@@ -24,6 +24,7 @@
 #include "user.h"
 #include "egg.h"
 #include "patterns.h"
+#include "hardware.h"
 
 #define DIAG_PORT_NUM UART_NUM_0
 #define TAG  "DIAG_UART"
@@ -49,6 +50,7 @@ void diag_process(uint8_t * buffer, size_t len)
 {
     uint8_t mode = ' ';
     int8_t value = -1;
+    bool load = false;
     size_t i;
     uint8_t val;
 
@@ -58,11 +60,22 @@ void diag_process(uint8_t * buffer, size_t len)
         if (val == 'b') mode = 'b';
         if (val == 'm') mode = 'm';
         if (val == 'o') mode = 'o';
+        if (val == 'l') load = true;
+
         if ((val >= '0') && (val <= '9')) {
             if (value == -1) value = 0;
             value = value *10;
             value += (val - '0');
         }
+    }
+    if (load) {
+        if ((value >= 0) && (value <=3 )) {
+            hardawre_load_set_state(HW_LOAD_0, value & 0x01);
+            hardawre_load_set_state(HW_LOAD_1, value & 0x02);
+        } else {
+            ESP_LOGE(TAG, "Load value out of range: %d", value);
+        }
+        return;
     }
     if (mode == ' ') {
         mode = mode_prev;
@@ -90,7 +103,7 @@ void diag_parse(uint8_t * buffer, size_t *len)
 {
     size_t command_start = 0;
     size_t command_end = 0;
-    ESP_LOGI(TAG, "buffer size: %u last char '%c' %u", *len, buffer[*len -1], buffer[*len -1]);
+ //   ESP_LOGI(TAG, "buffer size: %u last char '%c' %u", *len, buffer[*len -1], buffer[*len -1]);
     for (command_end = command_start; command_end < *len; command_end++) {
         if (buffer[command_end] == '\r') {
             diag_process(buffer + command_start, command_end - command_start);

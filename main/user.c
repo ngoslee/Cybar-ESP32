@@ -3,6 +3,7 @@
 #include "driver/uart.h"
 #include "lin_bar.h"
 #include "patterns.h"
+#include "hardware.h"
 #define USER_BUFFER_SIZE 255
 
 static uint8_t userInput[USER_BUFFER_SIZE+1];
@@ -77,7 +78,11 @@ int16_t  update_user_input(uint16_t * newValues)
         } else if (strcmp((char*)userInput, "off") == 0 ) {
             sequenceSelect(SEQ_IDLE);
             uart_write_bytes(UART_NUM_0, "IDLE MODE", 9);
-        } else {
+        } else if ((strncmp((char*)userInput, "load", 4) == 0 ) && (chunks == 1)) {
+            hardawre_load_set_states(values[0]);
+            uart_write_bytes(UART_NUM_0, "Load", 4);
+        }
+        else {
                     uart_write_bytes(UART_NUM_0, userInput, strlen((char*)userInput));
         }
         userInputFlag = 0;

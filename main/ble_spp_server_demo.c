@@ -28,6 +28,7 @@
 #include "user.h"
 #include "patterns.h"
 #include "diag_port.h"
+#include "hardware.h"
 
 #if (CONFIG_EXAMPLE_ENABLE_RF_TESTING_CONFIGURATION_COMMAND)
 #include "rf_tesing_configuration_cmd.h"
@@ -645,6 +646,7 @@ void app_main(void)
 //    sequenceSelect
     sequenceSelect(SEQ_IDLE);
 
+    hardware_init();
     spp_task_init();
     ESP_LOGI(GATTS_TABLE_TAG, "SPP task started" );
     bar_lin_init();

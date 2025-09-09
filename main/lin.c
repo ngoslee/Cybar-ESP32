@@ -30,7 +30,7 @@
 
 #define CONFIG_LIN_TRANSCEIVER_ECHO 1
 
-static const char *TAG = "LIN_BAR";
+static const char *TAG = "LIN";
 
 // Calculate LIN enhanced checksum (over PID + data)
 uint8_t lin_calc_checksum(uint8_t pid, uint8_t *data, size_t len) {
@@ -148,6 +148,7 @@ void lin_tx_frame(lin_port_t port, lin_msg_t msg) {
 
 // LIN RX task (ID 0x0B, 5 bytes)
 uint8_t lin_rx_frame(lin_port_t port, lin_msg_t msg) {
+    static bool worked = true;
     lin_send_header(port, msg.id);
  //   ESP_LOGI(TAG, "Header at %lld", esp_timer_get_time());
     uint8_t rx_buf[msg.len + 4]; // break, sync, pid, Data, checksum
@@ -157,13 +158,17 @@ uint8_t lin_rx_frame(lin_port_t port, lin_msg_t msg) {
         uint8_t checksum = lin_calc_checksum(lin_calc_pid(msg.id), rx_buf+3, msg.len);
         if (checksum == rx_buf[len - 1]) {
             memcpy(msg.data, rx_buf+3, msg.len);
+            worked = true;
             return len;
         } else {
             ESP_LOGE(TAG, "RX checksum error got %02X expected %02X", rx_buf[len + 4 - 1], checksum);
             return 0;
         }
     } else {
-        ESP_LOGE(TAG, "RX timeout or wrong length: %d", len);
+        if (worked) {
+            worked = false;
+            ESP_LOGE(TAG, "RX timeout or wrong length: %d", len);
+        }
         return 0;
     }
 }
