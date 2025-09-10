@@ -11,7 +11,7 @@
 #include "hal/uart_hal.h"
 #include "lin_bar.h"
 #include "soc/uart_struct.h"
-#include "ble_spp_server_demo.h"
+#include "ble_spp_server.h"
 #include "lin.h"
 #include "user.h"
 #include "egg.h"

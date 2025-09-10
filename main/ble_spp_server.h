@@ -3,6 +3,8 @@
  *
  * SPDX-License-Identifier: Unlicense OR CC0-1.0
  */
+#ifndef _SPP_SERVER_H_
+#define _SPP_SERVER_H_
 
 
 #include <stdio.h>
@@ -38,4 +40,7 @@ enum{
 
 bool spp_is_connected(void);
 void spp_send(uint8_t * data_ptr, size_t len);
+void spp_init(void);
+void spp_task_init(void);
 
+#endif

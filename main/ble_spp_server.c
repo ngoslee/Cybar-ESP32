@@ -20,7 +20,7 @@
 #include "esp_bt_defs.h"
 #include "esp_bt_main.h"
 #include "esp_bt_device.h"
-#include "ble_spp_server_demo.h"
+#include "ble_spp_server.h"
 #include "esp_gatt_common_api.h"
 #include "esp_timer.h"
 #include "lin_bar.h"
@@ -394,7 +394,7 @@ void spp_cmd_task(void * arg)
     vTaskDelete(NULL);
 }
 
-static void spp_task_init(void)
+void spp_task_init(void)
 {
 #ifdef CONFIG_EXAMPLE_ENABLE_RF_TESTING_CONFIGURATION_COMMAND
     rf_testing_configuration_command_enable();
@@ -637,29 +637,9 @@ static void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_
     } while (0);
 }
 
-
-void app_main(void)
-{
+void spp_init(void) {
     esp_err_t ret;
     esp_bt_controller_config_t bt_cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
-
-//    sequenceSelect
-    sequenceSelect(SEQ_IDLE);
-
-    hardware_init();
-    spp_task_init();
-    ESP_LOGI(GATTS_TABLE_TAG, "SPP task started" );
-    bar_lin_init();
-    ESP_LOGI(GATTS_TABLE_TAG, "Bar task started" );
-    truck_lin_init();
-    ESP_LOGI(GATTS_TABLE_TAG, "Truck task started" );
-    // Initialize NVS
-    ret = nvs_flash_init();
-    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-        ESP_ERROR_CHECK(nvs_flash_erase());
-        ret = nvs_flash_init();
-    }
-    ESP_ERROR_CHECK( ret );
 
     ESP_ERROR_CHECK(esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT));
 
@@ -710,6 +690,8 @@ void app_main(void)
 
     return;
 }
+
+
 
 
 bool spp_is_connected(void) {
