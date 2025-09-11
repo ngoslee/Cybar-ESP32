@@ -13,4 +13,7 @@ typedef enum {
 void hardawre_load_set_state(hardware_load_enum_t load, bool state);
 void hardware_init(void);
 void hardawre_load_set_states(uint8_t value);
+void hw_led_init(void);
+void hw_toggle_led(void);
+
 #endif

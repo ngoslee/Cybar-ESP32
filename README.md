@@ -25,7 +25,8 @@ load xx: xx = 0: off, 1: load 1, 2: load 2, 3: both loads
 Pinouts:
 Truck side LIN: Tx 22, Rx 23 
 Bar side LIN: Tx 32, Rx 33
-Loads: 16, 17
+Loads: 18, 17 **LOAD MOVED**
+RGB LED: 16
 
 LIN Protocol:
 19200 Baud, Enhanced checksum, each message is sent every 20 ms (so a message every 10 ms)

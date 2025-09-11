@@ -32,6 +32,7 @@ void app_main(void)
     sequenceSelect(SEQ_IDLE);
 
     hardware_init();
+    hw_led_init();
     spp_task_init();
     ESP_LOGI(TAG, "SPP task started" );
     bar_lin_init();
@@ -47,4 +48,9 @@ void app_main(void)
     ESP_ERROR_CHECK( ret );
 
     spp_init();
+
+    while (1) {
+    hw_toggle_led();
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
+    }
 }
