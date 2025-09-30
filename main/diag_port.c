@@ -69,9 +69,10 @@ void diag_process(uint8_t * buffer, size_t len)
         }
     }
     if (load) {
-        if ((value >= 0) && (value <=3 )) {
-            hardawre_load_set_state(HW_LOAD_0, value & 0x01);
-            hardawre_load_set_state(HW_LOAD_1, value & 0x02);
+        if ((value >= 0) && (value <=7 )) {
+            hardawre_load_set_state(HW_LOAD_1, value & 0x01);
+            hardawre_load_set_state(HW_LOAD_2, value & 0x02);
+            hardawre_load_set_state(HW_LOAD_3, value & 0x04);
         } else {
             ESP_LOGE(TAG, "Load value out of range: %d", value);
         }

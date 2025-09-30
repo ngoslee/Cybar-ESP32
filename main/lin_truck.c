@@ -15,10 +15,11 @@
 #include "lin.h"
 #include "user.h"
 #include "egg.h"
+#include "pinout.h"
+#include "hardware.h"
 
 #define TRUCK_LIN_UART_PORT UART_NUM_2
-#define TRUCK_LIN_TX_PIN GPIO_NUM_22
-#define TRUCK_LIN_RX_PIN GPIO_NUM_23
+
 #define LIN_BAUD_RATE 19200
 
 #define UART_BUF_SIZE 256
@@ -303,6 +304,7 @@ void truck_lin_task(void * arg)
 
 // Initialize UART and LIN
 void truck_lin_init(void) {
+    hw_lin_enable();
   //  lin_init(&truck_lin_port);
     uart_config_t uart_config = {
         .baud_rate = LIN_BAUD_RATE,

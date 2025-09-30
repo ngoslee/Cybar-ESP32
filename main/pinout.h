@@ -1,0 +1,41 @@
+#ifndef _PINOUT_H_
+#define _PINOUT_H_
+#include "driver/gpio.h"
+#include "driver/adc.h"
+
+#define HW_LIN_EN_PIN GPIO_NUM_27
+
+#define BAR_LIN_TX_PIN GPIO_NUM_18
+#define BAR_LIN_RX_PIN GPIO_NUM_17
+
+#define TRUCK_LIN_TX_PIN GPIO_NUM_26
+#define TRUCK_LIN_RX_PIN GPIO_NUM_19
+
+
+
+#define HW_LOAD_1_PIN (GPIO_NUM_21)
+#define HW_LOAD_2_PIN (GPIO_NUM_25)
+#define HW_LOAD_3_PIN (GPIO_NUM_23)
+
+
+#define HW_LOAD_SENSE_EN (GPIO_NUM_22)
+
+#define HW_LOAD_1_SENSE_PIN (GPIO_NUM_32)
+#define HW_LOAD_1_SENSE_CH (ADC1_CHANNEL_4)
+
+#define HW_LOAD_2_SENSE_PIN (GPIO_NUM_35)
+#define HW_LOAD_2_SENSE_CH (ADC1_CHANNEL_7)
+
+#define HW_LOAD_3_SENSE_PIN (GPIO_NUM_34)
+#define HW_LOAD_3_SENSE_CH (ADC1_CHANNEL_6)
+
+
+#define HW_BATT_SENSE_PIN (GPIO_NUM_33)
+#define HW_BATT_SENSE_CH (ADC1_CHANNEL_5)
+
+#define HW_TEMP_SENSE_PIN (GPIO_NUM_36)
+#define HW_TEMP_SENSE_CH (ADC1_CHANNEL_0)
+
+
+#endif
+

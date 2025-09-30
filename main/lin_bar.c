@@ -16,10 +16,11 @@
 #include "user.h"
 #include "patterns.h"
 #include "lin_truck.h"
+#include "pinout.h"
+#include "hardware.h"
 
 #define BAR_LIN_UART_PORT UART_NUM_1
-#define BAR_LIN_TX_PIN GPIO_NUM_32
-#define BAR_LIN_RX_PIN GPIO_NUM_33
+
 #define LIN_BAUD_RATE 19200
 #define LIN_BREAK_DURATION_US 768 // 14 bits at 19200 baud = 0.729 ms
 
@@ -140,6 +141,7 @@ void lin_register_rx_callback(void (*callback)(uint8_t *data, size_t len)) {
 
 // Initialize UART and LIN
 void bar_lin_init(void) {
+    hw_lin_enable();
     lin_init(&bar_lin_port);
     #if 0
     uart_config_t uart_config = {
