@@ -2,6 +2,8 @@
 #include <string.h>
 #include "esp_mac.h"
 #include "hardware.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "driver/gpio.h"
 #include "esp_log.h"
 #include "led_strip.h"
@@ -10,13 +12,14 @@
 
 #define TAG "HW"
 
+#define HW_LOAD_POLL_PERIOD (50) //ms
 
 #define BLINK_GPIO (16) //CONFIG_BLINK_GPIO
 
 static uint8_t s_led_state = 0;
 
 static led_strip_handle_t led_strip;
-
+static void hw_load_task(void *arg);
 
 void hardawre_load_set_state(hardware_load_enum_t load, bool state)
 {
@@ -58,6 +61,8 @@ void hardware_init(void) {
 
     gpio_set_level(HW_LOAD_SENSE_EN, 1);
     gpio_set_direction(HW_LOAD_SENSE_EN, GPIO_MODE_OUTPUT);
+
+    xTaskCreate(hw_load_task, "load_task", 4096, NULL, 11, NULL);
 
 }
 
@@ -101,4 +106,60 @@ void hw_lin_enable(void)
 {
     gpio_set_level(HW_LIN_EN_PIN, 1);
     gpio_set_direction(HW_LIN_EN_PIN, GPIO_MODE_OUTPUT);
+}
+
+
+
+// Periodic load task
+typedef struct {
+    adc_channel_t channel;
+    uint32_t sampleTotal;
+    uint32_t sampleCount;
+    uint16_t average;
+    bool cmd;
+    bool fault;
+} load_t;
+#define HW_NUM_LOADS 3
+load_t loads[HW_NUM_LOADS] = {{.channel = HW_LOAD_1_SENSE_CH},
+                {.channel = HW_LOAD_2_SENSE_CH},
+                {.channel = HW_LOAD_3_SENSE_CH},
+            };
+
+static void hw_load_task(void *arg) {
+
+    uint32_t batt_adc, temp_adc;
+    int16_t i,j;
+    //inital setup:
+    adc1_config_width(ADC_WIDTH_BIT_12);
+    adc1_config_channel_atten(HW_BATT_SENSE_CH, ADC_ATTEN_DB_12);
+    adc1_config_channel_atten(HW_TEMP_SENSE_CH, ADC_ATTEN_DB_12);
+    for (i=0; i<HW_NUM_LOADS; i++) {
+        adc1_config_channel_atten(loads[i].channel, ADC_ATTEN_DB_12);
+    }
+
+    while (1) {
+        //read ADCs
+        batt_adc = 0;
+        temp_adc = 0;        
+        for (j=0; j < HW_NUM_LOADS; j++) {
+            loads[j].sampleTotal = 0;
+            loads[j].sampleCount = 0;
+        }
+        for (i =0; i< 16; i++) {
+            batt_adc += adc1_get_raw(HW_BATT_SENSE_CH);
+            temp_adc += adc1_get_raw(HW_TEMP_SENSE_CH);
+            for (j=0; j < HW_NUM_LOADS; j++) {
+                loads[j].sampleTotal += adc1_get_raw(loads[j].channel);
+                loads[j].sampleCount ++;
+            }
+        }
+
+        ESP_LOGI(TAG, "batt %d   Temp %d loads %d %d %d", batt_adc>>4, temp_adc>>4, loads[0].sampleTotal/ loads[0].sampleCount, 
+            loads[1].sampleTotal/ loads[1].sampleCount, 
+            loads[2].sampleTotal/ loads[2].sampleCount);
+    
+//        vTaskDelay(pdMS_TO_TICKS(HW_LOAD_POLL_PERIOD));
+        vTaskDelay(pdMS_TO_TICKS(1000));
+
+    }
 }
