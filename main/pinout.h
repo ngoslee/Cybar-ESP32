@@ -1,7 +1,7 @@
 #ifndef _PINOUT_H_
 #define _PINOUT_H_
 #include "driver/gpio.h"
-#include "driver/adc.h"
+#include "esp_adc/adc_continuous.h"
 
 #define HW_LIN_EN_PIN GPIO_NUM_27
 
@@ -21,20 +21,20 @@
 #define HW_LOAD_SENSE_EN (GPIO_NUM_22)
 
 #define HW_LOAD_1_SENSE_PIN (GPIO_NUM_32)
-#define HW_LOAD_1_SENSE_CH (ADC1_CHANNEL_4)
+#define HW_LOAD_1_SENSE_CH (ADC_CHANNEL_4)
 
 #define HW_LOAD_2_SENSE_PIN (GPIO_NUM_35)
-#define HW_LOAD_2_SENSE_CH (ADC1_CHANNEL_7)
+#define HW_LOAD_2_SENSE_CH (ADC_CHANNEL_7)
 
 #define HW_LOAD_3_SENSE_PIN (GPIO_NUM_34)
-#define HW_LOAD_3_SENSE_CH (ADC1_CHANNEL_6)
+#define HW_LOAD_3_SENSE_CH (ADC_CHANNEL_6)
 
 
 #define HW_BATT_SENSE_PIN (GPIO_NUM_33)
-#define HW_BATT_SENSE_CH (ADC1_CHANNEL_5)
+#define HW_BATT_SENSE_CH (ADC_CHANNEL_5)
 
 #define HW_TEMP_SENSE_PIN (GPIO_NUM_36)
-#define HW_TEMP_SENSE_CH (ADC1_CHANNEL_0)
+#define HW_TEMP_SENSE_CH (ADC_CHANNEL_0)
 
 
 #endif
