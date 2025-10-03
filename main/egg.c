@@ -11,6 +11,7 @@
 #include "diag_port.h"
 #include "egg.h"
 #include "user.h"
+#include "web_server.h"
 
 static const char *TAG = "EGG";
 
@@ -22,7 +23,7 @@ typedef enum {
 
 static egg_state_enum_t egg_state = EGG_WAIT_42;
 static uint16_t timeout;
-static lin_bar_command_t msg_prev, user_cmd_prev, truck_cmd_prev, diag_cmd_prev, cmd_prev;
+static lin_bar_command_t msg_prev, user_cmd_prev, truck_cmd_prev, diag_cmd_prev, web_cmd_prev, cmd_prev;
 
 uint8_t update_if_new(lin_bar_command_t * prev, lin_bar_command_t * current, lin_bar_command_t * out) {
     if (memcmp(prev, current, sizeof(lin_bar_command_t))) {
@@ -36,7 +37,7 @@ uint8_t update_if_new(lin_bar_command_t * prev, lin_bar_command_t * current, lin
 void egg_msg_handler(void) {
 
     uint8_t changed = 0;
-    lin_bar_command_t diag_cmd, user_cmd, truck_cmd, final_cmd;
+    lin_bar_command_t diag_cmd, user_cmd, truck_cmd, final_cmd, web_cmd;
     memcpy(final_cmd.bytes, cmd_prev.bytes, 8);
     truck_get_command(truck_cmd.bytes);
     if ( update_if_new(&truck_cmd_prev, &truck_cmd, &final_cmd)) {
@@ -52,6 +53,12 @@ void egg_msg_handler(void) {
     if (update_if_new(&diag_cmd_prev, &diag_cmd, &final_cmd)) {
         changed  = 1;
  //       ESP_LOGI(TAG, "diag command %d %d %d %d %d %d ", diag_cmd.values.value0, diag_cmd.values.value1, diag_cmd.values.value2, diag_cmd.values.value3, diag_cmd.values.value4, diag_cmd.values.value5);
+    }
+
+    web_get_command(web_cmd.bytes);
+    if (update_if_new(&web_cmd_prev, &web_cmd, &final_cmd)) {
+        changed  = 1;
+        ESP_LOGI(TAG, "web command %d %d %d %d %d %d ", web_cmd.values.value0, web_cmd.values.value1, web_cmd.values.value2, web_cmd.values.value3, web_cmd.values.value4, web_cmd.values.value5);
     }
 
     if (changed == 0) return;

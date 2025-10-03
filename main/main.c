@@ -22,8 +22,10 @@
 #include "patterns.h"
 #include "diag_port.h"
 #include "hardware.h"
-
+#include "web_server.h"
 #define TAG "MAIN"
+
+
 
 void app_main(void)
 {
@@ -47,6 +49,7 @@ void app_main(void)
     }
     ESP_ERROR_CHECK( ret );
 
+    web_server_init();
     spp_init();
 
     while (1) {
