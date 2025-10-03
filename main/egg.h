@@ -5,6 +5,6 @@
 #include <string.h>
 #include "esp_mac.h"
 
-void egg_msg_handler(uint8_t *lin_data, uint8_t rxByteCount);
+void egg_msg_handler(void);
 
 #endif

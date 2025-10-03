@@ -16,11 +16,16 @@ typedef struct {
 } sequence_step_t;
 
 
+uint16_t sequenceActive(void)
+{
+    if (seq_active != SEQ_IDLE) return 1;
+    return 0;
+}
 void sequenceSelect(seq_enum_t newSequence) {
     if ((newSequence < SEQ_COUNT) && (seq_active != newSequence)) {
         seq_timer = 0;
         seq_active = newSequence;
-        ESP_LOGI(TAG, "sequence  %d", seq_active);
+ //       ESP_LOGI(TAG, "sequence  %d", seq_active);
     }
 }
 

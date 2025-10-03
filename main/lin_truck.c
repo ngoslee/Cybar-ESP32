@@ -78,7 +78,7 @@ void truck_lin_set_bar_data_response(uint8_t * data)
     }
     lin_txDataEdit = 0;
 }
-
+static lin_bar_command_t truck_command;
 void truck_lin_task(void * arg)
 {
     bool lin_debug = false;
@@ -272,7 +272,8 @@ void truck_lin_task(void * arg)
                             //handle received data
                             if (lin_debug) uart_write_bytes(UART_NUM_0, "cs ", 3);
 //                            ESP_LOGI(TAG, "Packet recevied"); 
-                            egg_msg_handler(lin_data, rxByteCount); 
+                            memcpy(truck_command.bytes, lin_data, 8);
+                            egg_msg_handler(); 
                         }
 
                         state = LIN_STATE_WAIT_BREAK;
@@ -300,7 +301,9 @@ void truck_lin_task(void * arg)
     vTaskDelete(NULL);
 }
 
-
+void truck_get_command(uint8_t * data) {
+    memcpy(data, truck_command.bytes, 8);
+}
 
 // Initialize UART and LIN
 void truck_lin_init(void) {

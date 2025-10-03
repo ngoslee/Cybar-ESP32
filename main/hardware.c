@@ -10,7 +10,7 @@
 #include "driver/rmt.h"
 #include "pinout.h"
 #include "esp_adc/adc_continuous.h"
-
+#include "lin_bar.h"
 #define TAG "HW"
 
 #define HW_LOAD_POLL_PERIOD (50) //ms
@@ -172,7 +172,7 @@ static void hw_load_task(void *arg) {
             }
             print_delay ++ ;
             if (print_delay > 200) print_delay = 0;
-            if (!print_delay) ESP_LOGI("TASK:", "ret is %x, ret_num is %d", ret, ret_num);
+      //      if (!print_delay) ESP_LOGI("TASK:", "ret is %x, ret_num is %d", ret, ret_num);
             #if 1
 
             for (int i = 0; i < ret_num; i += 2) {
@@ -273,12 +273,26 @@ void adc_init(void) {
         adc_pattern[i].unit = ADC_UNIT_1;
         adc_pattern[i].bit_width = SOC_ADC_DIGI_MAX_BITWIDTH;
 
-        ESP_LOGI(TAG, "adc_pattern[%d].atten is :%x", i, adc_pattern[i].atten);
-        ESP_LOGI(TAG, "adc_pattern[%d].channel is :%x", i, adc_pattern[i].channel);
-        ESP_LOGI(TAG, "adc_pattern[%d].unit is :%x", i, adc_pattern[i].unit);
+ //       ESP_LOGI(TAG, "adc_pattern[%d].atten is :%x", i, adc_pattern[i].atten);
+ //       ESP_LOGI(TAG, "adc_pattern[%d].channel is :%x", i, adc_pattern[i].channel);
+ //       ESP_LOGI(TAG, "adc_pattern[%d].unit is :%x", i, adc_pattern[i].unit);
     }
     adc_cfg.adc_pattern = adc_pattern;
     ESP_ERROR_CHECK(adc_continuous_config(adc_handle, &adc_cfg));
+}
 
 
+//turn normal command into external load vlaues
+void hw_load_set_cmd(uint8_t * data) {
+    static uint8_t prev_data[8];
+    lin_bar_command_t cmd;
+    if (memcmp(prev_data, data, 8)) {
+        memcpy(cmd.bytes, data, 8 );
+        memcpy(prev_data, data, 8 );
+        hardawre_load_set_state(HW_LOAD_1, cmd.values.value0 > 0?1:0);
+        uint16_t combine = 0;
+        if ((cmd.values.value1 > 0) || (cmd.values.value2 > 0) || (cmd.values.value3 > 0) || (cmd.values.value4 > 0)) combine = 1;
+        hardawre_load_set_state(HW_LOAD_2, combine > 0?1:0);
+        hardawre_load_set_state(HW_LOAD_3, cmd.values.value5 > 0?1:0);        
+    }
 }

@@ -16,6 +16,7 @@ typedef enum {
 
 void sequenceNext(uint16_t * values,  uint16_t * newValues);
 void sequenceSelect(seq_enum_t newSequence);
+uint16_t sequenceActive(void);
 
 
 #endif

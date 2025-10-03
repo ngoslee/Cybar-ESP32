@@ -18,6 +18,7 @@
 #include "lin_truck.h"
 #include "pinout.h"
 #include "hardware.h"
+#include "user.h"
 
 #define BAR_LIN_UART_PORT UART_NUM_1
 
@@ -85,10 +86,22 @@ static void bar_lin_task(void *arg) {
 
 
     while (1) {
+        update_user_input(); //update on user command        
         truck_input(newValues); //updates if truck sent value
-        update_user_input(newValues); //updates if user sent value
+
 
         sequenceNext(newValues, values_final); //overrides if mode active
+
+        //load act on final values to move with sequencer
+        lin_bar_command_t load_cmd;
+        load_cmd.values.value0 = values_final[0];
+        load_cmd.values.value1 = values_final[1];
+        load_cmd.values.value2 = values_final[2];
+        load_cmd.values.value3 = values_final[3];
+        load_cmd.values.value4 = values_final[4];
+        load_cmd.values.value5 = values_final[5];
+        
+        hw_load_set_cmd(load_cmd.bytes);
 
         bar_lin_set_tx_data(values_final, tx_data_shadow); //convert to bitfield
  //       ESP_LOGI(TAG, "%d %d %d %d %d %d", newValues[0], newValues[1], newValues[2], newValues[3], newValues[4], newValues[5] );

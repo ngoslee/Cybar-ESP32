@@ -6,6 +6,11 @@
 #include "egg.h"
 #include "esp_log.h"
 #include "lin_bar.h"
+#include "hardware.h"
+#include "lin_truck.h"
+#include "diag_port.h"
+#include "egg.h"
+#include "user.h"
 
 static const char *TAG = "EGG";
 
@@ -17,29 +22,49 @@ typedef enum {
 
 static egg_state_enum_t egg_state = EGG_WAIT_42;
 static uint16_t timeout;
-static lin_bar_command_t msg_prev;
+static lin_bar_command_t msg_prev, user_cmd_prev, truck_cmd_prev, diag_cmd_prev, cmd_prev;
 
-void egg_msg_handler(uint8_t *lin_data, uint8_t rxByteCount) {
-
-    lin_bar_command_t truck_cmd;
-
-    if (rxByteCount != 8) {
-        return;
+uint8_t update_if_new(lin_bar_command_t * prev, lin_bar_command_t * current, lin_bar_command_t * out) {
+    if (memcmp(prev, current, sizeof(lin_bar_command_t))) {
+        memcpy(prev, current, sizeof(lin_bar_command_t));
+        memcpy(out, current, sizeof(lin_bar_command_t));
+        return 1;
     }
-    memcpy(&truck_cmd, lin_data, 8);
+    return 0;
+}
 
-    if (memcmp(msg_prev.bytes, truck_cmd.bytes, sizeof(lin_bar_command_t))) {
-        memcpy(msg_prev.bytes, truck_cmd.bytes, sizeof(lin_bar_command_t));
-        ESP_LOGI(TAG, "truck command %d %d %d %d %d %d ", truck_cmd.values.value0, truck_cmd.values.value1, truck_cmd.values.value2, truck_cmd.values.value3, truck_cmd.values.value4, truck_cmd.values.value5);
+void egg_msg_handler(void) {
+
+    uint8_t changed = 0;
+    lin_bar_command_t diag_cmd, user_cmd, truck_cmd, final_cmd;
+    memcpy(final_cmd.bytes, cmd_prev.bytes, 8);
+    truck_get_command(truck_cmd.bytes);
+    if ( update_if_new(&truck_cmd_prev, &truck_cmd, &final_cmd)) {
+        changed  = 1;
+   //     ESP_LOGI(TAG, "truck command %d %d %d %d %d %d ", truck_cmd.values.value0, truck_cmd.values.value1, truck_cmd.values.value2, truck_cmd.values.value3, truck_cmd.values.value4, truck_cmd.values.value5);
     }
-    //now add easter egg
+    user_get_command(user_cmd.bytes);
+    if ( update_if_new(&user_cmd_prev, &user_cmd, &final_cmd)) {
+        changed  = 1;
+ //       ESP_LOGI(TAG, "user command %d %d %d %d %d %d ", user_cmd.values.value0, user_cmd.values.value1, user_cmd.values.value2, user_cmd.values.value3, user_cmd.values.value4, user_cmd.values.value5);
+    }
+    diag_get_command(diag_cmd.bytes);
+    if (update_if_new(&diag_cmd_prev, &diag_cmd, &final_cmd)) {
+        changed  = 1;
+ //       ESP_LOGI(TAG, "diag command %d %d %d %d %d %d ", diag_cmd.values.value0, diag_cmd.values.value1, diag_cmd.values.value2, diag_cmd.values.value3, diag_cmd.values.value4, diag_cmd.values.value5);
+    }
+
+    if (changed == 0) return;
+    memcpy(cmd_prev.bytes, final_cmd.bytes, 8);
+
+        //now add easter egg
     /* if command is side lights on, main off and 42 brightness is selected followed by 69, engage KITT , truck_cmd.values.value0, truck, truck_cmd.values.value0, truck_cmd.values.value0_cmd.values.value0
     if lights are alll off, disable it*/
     
     //are mains off?
     switch(egg_state) {
         case EGG_WAIT_42:
-            if ((truck_cmd.values.value1 == 42) || (truck_cmd.values.value0 == 42)) {
+            if ((final_cmd.values.value1 == 42) || (final_cmd.values.value0 == 42)) {
                 ESP_LOGI(TAG, "Wait 69");
                 egg_state = EGG_WAIT_69;
                 timeout = 2000 / 20; //three seconds to select 69
@@ -47,13 +72,13 @@ void egg_msg_handler(uint8_t *lin_data, uint8_t rxByteCount) {
             break;
 
         case EGG_WAIT_69:
-            if  ((truck_cmd.values.value1 == 42) || (truck_cmd.values.value0 == 42)) {
+            if  ((final_cmd.values.value1 == 42) || (final_cmd.values.value0 == 42)) {
                 timeout = 2000 / 20; //three seconds to select 69
             }
-            else if ((truck_cmd.values.value1 == 69) || (truck_cmd.values.value0 == 69)){
+            else if ((final_cmd.values.value1 == 69) || (final_cmd.values.value0 == 69)){
                 ESP_LOGI(TAG, "Active");
                 egg_state = EGG_ACTIVE;
-            } else if (((truck_cmd.values.value0 < 60) && (truck_cmd.values.value0 >= 50)) || ((truck_cmd.values.value1 < 60) && (truck_cmd.values.value1 >= 50)) ) {
+            } else if (((final_cmd.values.value0 < 60) && (final_cmd.values.value0 >= 50)) || ((final_cmd.values.value1 < 60) && (final_cmd.values.value1 >= 50)) ) {
                 ESP_LOGI(TAG, "50s ");
                 egg_state = EGG_WAIT_42;
             } else {
@@ -73,17 +98,18 @@ void egg_msg_handler(uint8_t *lin_data, uint8_t rxByteCount) {
     }    
     //put after switch to take effect immediately
     if (egg_state == EGG_ACTIVE) {
-            if ((truck_cmd.values.value0 == 0) && (truck_cmd.values.value1 == 100)) {
+            if ((final_cmd.values.value0 == 0) && (final_cmd.values.value1 == 100)) {
                 sequenceSelect(SEQ_IDLE);
                 egg_state = EGG_WAIT_42;
                 ESP_LOGI(TAG, "Off");
-            } else if ((truck_cmd.values.value0 == 0 ) && (truck_cmd.values.value1 > 0)) {
+            } else if ((final_cmd.values.value0 == 0 ) && (final_cmd.values.value1 > 0)) {
                 sequenceSelect(SEQ_KITT);
-            } else if ((truck_cmd.values.value0 > 0 ) && (truck_cmd.values.value1 > 0)) {
+            } else if ((final_cmd.values.value0 > 0 ) && (final_cmd.values.value1 > 0)) {
                 sequenceSelect(SEQ_SWEEP);
-            } else if ((truck_cmd.values.value0 > 0 ) && (truck_cmd.values.value1 == 0)) {
+            } else if ((final_cmd.values.value0 > 0 ) && (final_cmd.values.value1 == 0)) {
                 sequenceSelect(SEQ_WIG_WAG);
             }
     }
-    bar_lin_truck_cmd(truck_cmd.bytes);
+    bar_lin_truck_cmd(final_cmd.bytes);
+  //  hw_load_set_cmd(final_cmd.bytes);
 }

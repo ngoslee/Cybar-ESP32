@@ -32,6 +32,7 @@ QueueHandle_t spp_uart_queue = NULL;
 
 #define RX_BUFFER_SIZE 255
 
+static lin_bar_command_t diag_command;
 static uint8_t mode_prev;
 static uint8_t value_prev;
 
@@ -49,6 +50,7 @@ static uint8_t value_prev;
 void diag_process(uint8_t * buffer, size_t len)
 {
     uint8_t mode = ' ';
+    uint8_t smode = ' ';
     int8_t value = -1;
     bool load = false;
     size_t i;
@@ -59,7 +61,13 @@ void diag_process(uint8_t * buffer, size_t len)
         if (val == 'd') mode = 'd';
         if (val == 'b') mode = 'b';
         if (val == 'm') mode = 'm';
-        if (val == 'o') mode = 'o';
+        if (val == 'o') {
+            mode = 'o';
+            smode = 'o';
+        }
+        if (val == 'k') smode = 'k';
+        if (val == 'w') smode = 'w';
+        if (val == 's') smode = 's';
         if (val == 'l') load = true;
 
         if ((val >= '0') && (val <= '9')) {
@@ -85,7 +93,23 @@ void diag_process(uint8_t * buffer, size_t len)
 
     mode_prev = mode;
     value_prev = value;
-    ESP_LOGI(TAG, "mode %c value %u\n", mode, value);
+//    ESP_LOGI(TAG, "mode %c value %u\n", mode, value);
+
+    if (smode == 'k') {
+        sequenceSelect(SEQ_KITT);
+        uart_write_bytes(UART_NUM_0, "KITT MODE\n", 10);
+
+    } else if (smode == 'w') {
+        sequenceSelect(SEQ_WIG_WAG);
+        uart_write_bytes(UART_NUM_0, "WIG WAG MODE\n", 13);
+    } else if (smode == 's') {
+        sequenceSelect(SEQ_SWEEP);
+        uart_write_bytes(UART_NUM_0, "SWEEP MODE\n", 11);
+    }
+    else if (smode == 'o') {
+        sequenceSelect(SEQ_IDLE);
+    }
+
     lin_bar_command_t msg = {.bytes = {0}};
     if ((mode == 'd') || (mode == 'b')) {
         msg.values.value0 = value;
@@ -97,7 +121,13 @@ void diag_process(uint8_t * buffer, size_t len)
         msg.values.value3 = value;
         msg.values.value4 = value;
     }
-    egg_msg_handler(msg.bytes, 8);
+
+    memcpy(diag_command.bytes, msg.bytes, 8);
+    egg_msg_handler();
+}
+
+void diag_get_command(uint8_t data[8]) {
+    memcpy(data, diag_command.bytes, 8);
 }
 
 void diag_parse(uint8_t * buffer, size_t *len)
@@ -137,6 +167,7 @@ void uart_task(void *pvParameters)
             //Event of UART receiving data
             case UART_DATA:
                 if (event.size) {
+                    /* //send diag to BT
                     if (spp_is_connected()) {
                         temp = (uint8_t *)malloc(sizeof(uint8_t)*event.size);
                         if (temp == NULL) {
@@ -147,7 +178,7 @@ void uart_task(void *pvParameters)
                         spp_send(temp, event.size);
                         free(temp);
                         rx_buffer_count = 0;
-                    } else {
+                    } else */ {
 
                         if ((event.size + rx_buffer_count) < RX_BUFFER_SIZE) {
                             uart_read_bytes(DIAG_PORT_NUM, rx_buffer + rx_buffer_count, event.size, portMAX_DELAY);
