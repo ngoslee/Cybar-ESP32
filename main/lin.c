@@ -35,6 +35,9 @@ static const char *TAG = "LIN";
 // Calculate LIN enhanced checksum (over PID + data)
 uint8_t lin_calc_checksum(uint8_t pid, uint8_t *data, size_t len) {
     uint16_t sum = pid;
+    if ((pid == lin_calc_pid(0x3C)) || (pid == lin_calc_pid(0x3D))) {
+        pid = 0;
+    }
     for (size_t i = 0; i < len; i++) {
         sum += data[i];
         if (sum >= 256) sum -= 255;
