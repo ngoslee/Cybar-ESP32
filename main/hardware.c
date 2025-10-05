@@ -187,6 +187,20 @@ static void hw_load_task(void *arg) {
 
             if (!print_delay) {
                 uint32_t cnt = adc_results[0].sampleCount;
+                #if 0
+                ESP_LOGI(TAG, "samples cnt %d batt %d   Temp %d loads %d %d %d", cnt, 
+                    adc_results[5].sampleCount,
+                    adc_results[0].sampleCount,
+                    adc_results[4].sampleCount,
+                    adc_results[7].sampleCount,
+                    adc_results[6].sampleCount);
+                ESP_LOGI(TAG, "totals cnt %d batt %d   Temp %d loads %d %d %d", cnt, 
+                    adc_results[5].sampleTotal,
+                    adc_results[0].sampleTotal,
+                    adc_results[4].sampleTotal,
+                    adc_results[7].sampleTotal,
+                    adc_results[6].sampleTotal);
+#endif
                 for (int i=0; i< 8; i++) {
                     if (adc_results[i].sampleCount > 0) {
                        adc_results[i].average = adc_results[i].sampleTotal / adc_results[i].sampleCount;
