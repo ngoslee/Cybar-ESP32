@@ -28,7 +28,7 @@
 
 #define DIAG_PORT_NUM UART_NUM_0
 #define TAG  "DIAG_UART"
-QueueHandle_t spp_uart_queue = NULL;
+QueueHandle_t diag_uart_queue = NULL;
 
 #define RX_BUFFER_SIZE 255
 
@@ -162,7 +162,7 @@ void uart_task(void *pvParameters)
 
     for (;;) {
         //Waiting for UART event.
-        if (xQueueReceive(spp_uart_queue, (void * )&event, (TickType_t)portMAX_DELAY)) {
+        if (xQueueReceive(diag_uart_queue, (void * )&event, (TickType_t)portMAX_DELAY)) {
             switch (event.type) {
             //Event of UART receiving data
             case UART_DATA:
@@ -200,7 +200,7 @@ void uart_task(void *pvParameters)
     vTaskDelete(NULL);
 }
 
-void spp_uart_init(void)
+void diag_uart_init(void)
 {
     uart_config_t uart_config = {
         .baud_rate = 115200,
@@ -213,7 +213,7 @@ void spp_uart_init(void)
     };
 
     //Install UART driver, and get the queue.
-    uart_driver_install(DIAG_PORT_NUM, 4096, 8192, 10, &spp_uart_queue,0);
+    uart_driver_install(DIAG_PORT_NUM, 4096, 8192, 10, &diag_uart_queue,0);
     //Set UART parameters
     uart_param_config(DIAG_PORT_NUM, &uart_config);
     //Set UART pins

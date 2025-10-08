@@ -51,7 +51,7 @@ void app_main(void)
 
     web_server_init();
     spp_init();
-
+    diag_uart_init();
     while (1) {
     hw_toggle_led();
     vTaskDelay(2000 / portTICK_PERIOD_MS);

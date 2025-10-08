@@ -396,17 +396,6 @@ void spp_cmd_task(void * arg)
 
 void spp_task_init(void)
 {
-#ifdef CONFIG_EXAMPLE_ENABLE_RF_TESTING_CONFIGURATION_COMMAND
-    rf_testing_configuration_command_enable();
-#else
-    spp_uart_init();
-#endif // CONFIG_EXAMPLE_ENABLE_RF_TESTING_CONFIGURATION_COMMAND
-
-#ifdef SUPPORT_HEARTBEAT
-    cmd_heartbeat_queue = xQueueCreate(10, sizeof(uint32_t));
-    xTaskCreate(spp_heartbeat_task, "spp_heartbeat_task", 2048, NULL, 10, NULL);
-#endif
-
     cmd_cmd_queue = xQueueCreate(10, sizeof(uint32_t));
     xTaskCreate(spp_cmd_task, "spp_cmd_task", 4096, NULL, 10, NULL);
 }
