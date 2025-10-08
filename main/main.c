@@ -23,6 +23,7 @@
 #include "diag_port.h"
 #include "hardware.h"
 #include "web_server.h"
+#include "system.h"
 #define TAG "MAIN"
 
 
@@ -35,6 +36,7 @@ void app_main(void)
 
     hardware_init();
     hw_led_init();
+    system_init();
  //   spp_task_init();
 //    ESP_LOGI(TAG, "SPP task started" );
     bar_lin_init();
@@ -52,6 +54,7 @@ void app_main(void)
     web_server_init();
  //   spp_init();
     diag_uart_init();
+
     while (1) {
     hw_toggle_led();
     vTaskDelay(2000 / portTICK_PERIOD_MS);

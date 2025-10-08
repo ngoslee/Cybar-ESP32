@@ -13,11 +13,13 @@
 #include "nvs_flash.h"
 #include "lwip/err.h"
 #include "lwip/sys.h"
+#include "lwip/ip4_addr.h"
 #include "esp_http_server.h"
 #include "web_server.h"
 #include "cJSON.h" // Assume cJSON component is included in the project
 #include "lin_bar.h"
 #include "egg.h"
+#include "system.h"
 
 static const char *TAG = "ESP32_WEB_SERVER";
 
@@ -403,22 +405,37 @@ void init_wifi(void) {
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
 
+    char * ap_name = system_get_name();
+    if (ap_name == NULL) {
+        ap_name = "ESP32_AP";
+    }
     wifi_config_t wifi_config = {
         .ap = {
-            .ssid = "ESP32_AP",
-            .ssid_len = strlen("ESP32_AP"),
+            .ssid_len = strlen(ap_name),
             .channel = 1,
             .password = "esp32pass",
             .max_connection = 4,
             .authmode = WIFI_AUTH_WPA_WPA2_PSK
         },
     };
+    strcpy((char *) wifi_config.ap.ssid, ap_name);
 
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &wifi_config));
+
+    esp_netif_ip_info_t ip_info;
+    IP4_ADDR(&ip_info.ip, 192, 168, 5,1);
+    IP4_ADDR(&ip_info.gw, 192, 168, 5,1);
+    IP4_ADDR(&ip_info.netmask, 255, 255, 255, 0);
+    
+    esp_netif_t *ap_netif = esp_netif_get_handle_from_ifkey("WIFI_AP_DEF");
+    esp_netif_dhcps_stop(ap_netif);
+    esp_netif_set_ip_info(ap_netif, &ip_info);
+    esp_netif_dhcps_start(ap_netif);
+
     ESP_ERROR_CHECK(esp_wifi_start());
 
-    ESP_LOGI(TAG, "WiFi AP started. SSID: %s, Password: %s", "ESP32_AP", "esp32pass");
+    ESP_LOGI(TAG, "WiFi AP started. SSID: %s, Password: %s", ap_name, "esp32pass");
 }
 
 esp_err_t init_web_server(void) {

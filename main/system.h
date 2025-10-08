@@ -25,4 +25,8 @@ typedef enum {
 void system_set_lin_mode(system_lin_mode_enum_t mode);
 system_lin_mode_enum_t system_get_lin_mode(void);
 
+char * system_get_name(void);
+void system_init(void);
+
+
 #endif
