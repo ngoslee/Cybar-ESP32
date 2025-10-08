@@ -11,6 +11,8 @@
 #include "pinout.h"
 #include "esp_adc/adc_continuous.h"
 #include "lin_bar.h"
+#include "system.h"
+
 #define TAG "HW"
 
 #define HW_LOAD_POLL_PERIOD (50) //ms
@@ -303,10 +305,34 @@ void hw_load_set_cmd(uint8_t * data) {
     if (memcmp(prev_data, data, 8)) {
         memcpy(cmd.bytes, data, 8 );
         memcpy(prev_data, data, 8 );
-        hardawre_load_set_state(HW_LOAD_1, cmd.values.value0 > 0?1:0);
-        uint16_t combine = 0;
-        if ((cmd.values.value1 > 0) || (cmd.values.value2 > 0) || (cmd.values.value3 > 0) || (cmd.values.value4 > 0)) combine = 1;
-        hardawre_load_set_state(HW_LOAD_2, combine > 0?1:0);
-        hardawre_load_set_state(HW_LOAD_3, cmd.values.value5 > 0?1:0);        
+        system_load_mode_enum_t mode = system_get_load_mode();
+        switch (mode)
+        {
+        case LOAD_MODE_COMBO:
+            hardawre_load_set_state(HW_LOAD_1, cmd.values.value0 > 0?1:0);
+            uint16_t combine = 0;
+            if ((cmd.values.value1 > 0) || (cmd.values.value2 > 0) || (cmd.values.value3 > 0) || (cmd.values.value4 > 0)) combine = 1;
+            hardawre_load_set_state(HW_LOAD_2, combine > 0?1:0);
+            hardawre_load_set_state(HW_LOAD_3, cmd.values.value5 > 0?1:0);        
+            break;
+        case LOAD_MODE_LEFT:
+            hardawre_load_set_state(HW_LOAD_1, cmd.values.value0 > 0?1:0);
+            hardawre_load_set_state(HW_LOAD_2, cmd.values.value1 > 0?1:0);
+            hardawre_load_set_state(HW_LOAD_3, cmd.values.value2 > 0?1:0);        
+            break;
+        case LOAD_MODE_RIGHT:
+            hardawre_load_set_state(HW_LOAD_1, cmd.values.value3 > 0?1:0);
+            hardawre_load_set_state(HW_LOAD_2, cmd.values.value4 > 0?1:0);
+            hardawre_load_set_state(HW_LOAD_3, cmd.values.value5 > 0?1:0);        
+            break;
+        case LOAD_MODE_OFF:
+        // no action
+//            hardawre_load_set_state(HW_LOAD_1, 0);
+//            hardawre_load_set_state(HW_LOAD_2, 0);
+//            hardawre_load_set_state(HW_LOAD_3, 0);        
+            break;        
+        default:
+            break;
+        }
     }
 }

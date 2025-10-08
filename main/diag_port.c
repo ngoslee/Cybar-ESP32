@@ -25,6 +25,7 @@
 #include "egg.h"
 #include "patterns.h"
 #include "hardware.h"
+#include "system.h"
 
 #define DIAG_PORT_NUM UART_NUM_0
 #define TAG  "DIAG_UART"
@@ -51,6 +52,7 @@ void diag_process(uint8_t * buffer, size_t len)
 {
     uint8_t mode = ' ';
     uint8_t smode = ' ';
+    uint8_t lmode = ' ';
     int8_t value = -1;
     bool load = false;
     size_t i;
@@ -68,7 +70,12 @@ void diag_process(uint8_t * buffer, size_t len)
         if (val == 'k') smode = 'k';
         if (val == 'w') smode = 'w';
         if (val == 's') smode = 's';
+
         if (val == 'l') load = true;
+        if (val== 'L') lmode = 'L';
+        if (val== 'R') lmode = 'R';
+        if (val== 'C') lmode = 'C';
+        if (val== 'O') lmode = 'O';
 
         if ((val >= '0') && (val <= '9')) {
             if (value == -1) value = 0;
@@ -83,6 +90,23 @@ void diag_process(uint8_t * buffer, size_t len)
             hardawre_load_set_state(HW_LOAD_3, value & 0x04);
         } else {
             ESP_LOGE(TAG, "Load value out of range: %d", value);
+        }
+        return;
+    }
+    if (lmode != ' ') {
+        system_set_load_mode(lmode);
+        if (lmode == 'C') {
+            system_set_load_mode(LOAD_MODE_COMBO);
+            uart_write_bytes(UART_NUM_0, "Load mode: COMBO\n", 17);
+        } else if (lmode == 'L') {
+            system_set_load_mode(LOAD_MODE_LEFT);
+            uart_write_bytes(UART_NUM_0, "Load mode: LEFT\n", 16);
+        } else if (lmode == 'R') {
+            system_set_load_mode(LOAD_MODE_RIGHT);
+            uart_write_bytes(UART_NUM_0, "Load mode: RIGHT\n", 17);
+        } else if (lmode == 'O') {
+            system_set_load_mode(LOAD_MODE_OFF);
+            uart_write_bytes(UART_NUM_0, "Load mode: OFF\n", 15);
         }
         return;
     }
