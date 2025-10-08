@@ -35,8 +35,8 @@ void app_main(void)
 
     hardware_init();
     hw_led_init();
-    spp_task_init();
-    ESP_LOGI(TAG, "SPP task started" );
+ //   spp_task_init();
+//    ESP_LOGI(TAG, "SPP task started" );
     bar_lin_init();
     ESP_LOGI(TAG, "Bar task started" );
     truck_lin_init();
@@ -50,7 +50,7 @@ void app_main(void)
     ESP_ERROR_CHECK( ret );
 
     web_server_init();
-    spp_init();
+ //   spp_init();
     diag_uart_init();
     while (1) {
     hw_toggle_led();
