@@ -17,6 +17,7 @@
 #include "egg.h"
 #include "pinout.h"
 #include "hardware.h"
+#include "system.h"
 
 #define TRUCK_LIN_UART_PORT UART_NUM_2
 
@@ -145,7 +146,7 @@ void truck_lin_task(void * arg)
 
 
                 if (sniff) {
-                    if ((state == LIN_STATE_WAIT_BREAK) || ((state == LIN_STATE_WAIT_BREAK_SIGNAL) || (state == LIN_STATE_WAIT_BREAK_BYTE))) {
+                    if ((state == LIN_STATE_WAIT_BREAK) || ((state == LIN_STATE_WAIT_BREAK_SIGNAL) || (state == LIN_STATE_WAIT_BREAK_BYTE) || (state == LIN_STATE_WAIT_SYNC))) {
                         sniff_buf[sniff_len] = newByte;
                         if (sniff_len < SNIFF_MAX_SIZE) sniff_len ++;
                     } else {
@@ -222,6 +223,12 @@ void truck_lin_task(void * arg)
                                state = LIN_STATE_WAIT_DATA;
                                break;
                             case BAR_TO_TRUCK_ID:
+                                //is in a listen only mode, don;t respond, we may receive bar data os the request may go unanswered
+                                if (system_get_lin_mode() == LIN_MODE_LISTEN) {
+                                    uart_read_bytes(truck_lin_port.uart, rxBuffer, BAR_TO_TRUCK_DATA_LEN+1, pdMS_TO_TICKS((BAR_TO_TRUCK_DATA_LEN+1)*10*1000/LIN_BAUD_RATE)); //wait on data for expected time
+                                    state = LIN_STATE_WAIT_BREAK; //note, really need better break detection
+                                    break;
+                                }
                         //        ESP_LOGI(TAG, "ID at %lld", esp_timer_get_time());
                                 txByteCount = BAR_TO_TRUCK_DATA_LEN;
                                 //get data 
