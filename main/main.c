@@ -24,6 +24,8 @@
 #include "hardware.h"
 #include "web_server.h"
 #include "system.h"
+#include "web_mesh.h"
+#include "mesh_node.h"
 #define TAG "MAIN"
 
 
@@ -34,7 +36,7 @@ void app_main(void)
 //    sequenceSelect
     sequenceSelect(SEQ_IDLE);
 
-    hardware_init();
+ //   hardware_init();
     hw_led_init();
     system_init();
  //   spp_task_init();
@@ -51,7 +53,9 @@ void app_main(void)
     }
     ESP_ERROR_CHECK( ret );
 
-    web_server_init();
+//    web_server_init();
+//web_mesh_init();
+mesh_node_init();
  //   spp_init();
     diag_uart_init();
 
