@@ -14,6 +14,7 @@
 #include "lwip/netdb.h"
 #include "esp_mac.h" // For MACSTR and MAC2STR macros
 
+#define CONFIG_MESH_ROUTE_TABLE_SIZE 10
 
 static const char *TAG = "mesh_module";
 static EventGroupHandle_t s_wifi_event_group;
@@ -138,6 +139,11 @@ static void send_task(void *pvParameters) {
 }
 
 static void udp_recv_from_ap_task(void *pvParameters) {
+        int i;
+    esp_err_t err;
+    int send_count = 0;
+    mesh_addr_t route_table[CONFIG_MESH_ROUTE_TABLE_SIZE];
+    int route_table_size = 0;
    // if (!esp_mesh_is_root())  vTaskDelete(NULL);
     xEventGroupWaitBits(s_wifi_event_group, CONNECTED_BIT, false, true, portMAX_DELAY);
     ESP_LOGI(TAG, "**** Node connected to AP");
@@ -161,14 +167,28 @@ static void udp_recv_from_ap_task(void *pvParameters) {
             data.size = len;
             data.proto = MESH_PROTO_BIN;
             data.tos = MESH_TOS_DEF;
-            mesh_addr_t broadcast_addr = {
-                //38:18:2b:f0:a7:08:
-                 .addr = {0x38, 0x18, 0x2b, 0xF0, 0xa7, 0x08} // Broadcast MAC address
-            };
-            if (esp_mesh_send(&broadcast_addr, &data, MESH_DATA_FROMDS, NULL, 0)) {
-                ESP_LOGE(TAG, "Failed to broadcast message");
-            } else {
-                ESP_LOGI(TAG, "Broadcasted message to mesh nodes: %s", rx_buffer);
+
+            esp_mesh_get_routing_table((mesh_addr_t *) &route_table,
+                                   CONFIG_MESH_ROUTE_TABLE_SIZE * 6, &route_table_size);
+
+            for (i = 0; i < route_table_size; i++) {
+                err = esp_mesh_send(&route_table[i], &data, MESH_DATA_P2P, NULL, 0);
+                if (err) {
+                    ESP_LOGE(TAG,
+                            "[ROOT-2-UNICAST:%d][L:%d] to "MACSTR", heap:%" PRId32 "[err:0x%x, proto:%d, tos:%d]",
+                            send_count, mesh_layer, 
+                            MAC2STR(route_table[i].addr), esp_get_minimum_free_heap_size(),
+                            err, data.proto, data.tos);
+                } else {
+                    ESP_LOGW(TAG,
+                            "[ROOT-2-UNICAST:%d][L:%d][rtableSize:%d] to "MACSTR", heap:%" PRId32 "[err:0x%x, proto:%d, tos:%d]",
+                            send_count, mesh_layer,
+                            esp_mesh_get_routing_table_size(),
+                           
+                            MAC2STR(route_table[i].addr), esp_get_minimum_free_heap_size(),
+                            err, data.proto, data.tos);
+                }
+                send_count++;
             }
         }
     }
