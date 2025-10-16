@@ -37,7 +37,7 @@ void app_main(void)
 //    sequenceSelect
     sequenceSelect(SEQ_IDLE);
 
- //   hardware_init();
+    hardware_init();
     hw_led_init();
     system_init();
  //   spp_task_init();
