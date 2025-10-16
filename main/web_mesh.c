@@ -65,8 +65,25 @@ static esp_err_t root_get_handler(httpd_req_t *req) {
     return ESP_OK;
 }
 
+esp_err_t send_to_mesh(const char *msg, size_t len) {
+    // Send to root via UDP (assume root IP is 192.168.4.2, first DHCP lease)
+    struct sockaddr_in dest_addr;
+    int sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
+    if (sock >= 0) {
+        dest_addr.sin_addr.s_addr = inet_addr("192.168.4.2");
+        dest_addr.sin_family = AF_INET;
+        dest_addr.sin_port = htons(3334);
+        sendto(sock, msg, len, 0, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
+        close(sock);
+        ESP_LOGI(TAG, "Sent message to root: %s", msg);
+        return ESP_OK;
+    }
+    ESP_LOGE(TAG, "Failed to create socket to send message to root");
+    return ESP_FAIL;
+}    
 static esp_err_t root_post_handler(httpd_req_t *req) {
     char buf[100];
+    size_t len;
     int ret = httpd_req_recv(req, buf, sizeof(buf) - 1);
     if (ret <= 0) return ESP_ERR_HTTPD_RESP_SEND;
     buf[ret] = '\0';
@@ -75,22 +92,16 @@ static esp_err_t root_post_handler(httpd_req_t *req) {
         message_start += 8;
         char *end = strchr(message_start, '&');
         if (end) *end = '\0';
-        // Send to root via UDP (assume root IP is 192.168.4.2, first DHCP lease)
-        struct sockaddr_in dest_addr;
-        int sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
-        if (sock >= 0) {
-            dest_addr.sin_addr.s_addr = inet_addr("192.168.4.2");
-            dest_addr.sin_family = AF_INET;
-            dest_addr.sin_port = htons(3334);
-            for(int i=0; i<strlen(message_start); i++) {
-                if (message_start[i] == '+') message_start[i] = ' ';
-            }
-            sendto(sock, message_start, strlen(message_start), 0, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
-            close(sock);
-            ESP_LOGI(TAG, "Sent message to root: %s", message_start);
+        len= strlen(message_start);
+        for(int i=0; i<len; i++) {
+            if (message_start[i] == '+') message_start[i] = ' ';
+        }        // Send to root via UDP (assume root IP is 192.168.4.2, first DHCP lease)
+        if (send_to_mesh(message_start, len) == ESP_OK) {
+            httpd_resp_send(req, "Message sent", HTTPD_RESP_USE_STRLEN);
         }
+        return ESP_OK; 
     }
-    httpd_resp_send(req, "Message sent", HTTPD_RESP_USE_STRLEN);
+    httpd_resp_send(req, "Message failed", HTTPD_RESP_USE_STRLEN);
     return ESP_OK;
 }
 
