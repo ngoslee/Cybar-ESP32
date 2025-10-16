@@ -178,11 +178,8 @@ static void send_task(void *pvParameters) {
                 dest_addr.sin_family = AF_INET;
                 dest_addr.sin_port = htons(3333);
 
-                //Disable self-organized networking
-//esp_mesh_set_self_organized(0, 0);
                 sent = sendto(sock, full_status, strlen(full_status), 0, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
-                //Re-enable self-organized networking if still connected
-//esp_mesh_set_self_organized(1, 0);
+
                 if (sent < 0) {
                     ESP_LOGE(TAG, "Error occurred during sending: errno %d", errno);
                 } else {
@@ -198,38 +195,6 @@ static void send_task(void *pvParameters) {
             esp_mesh_send(NULL, &data, MESH_DATA_TODS, NULL, 0);
         }
         vTaskDelay(5000 / portTICK_PERIOD_MS); // Send every 5 seconds
-    }
-    free(data.data);
-    vTaskDelete(NULL);
-}
-
-static void just_send_task(void *pvParameters) {
-    int count = 0;
-    mesh_data_t data;
-    data.data = (uint8_t *)malloc(200);
-    data.proto = MESH_PROTO_BIN;
-    data.tos = MESH_TOS_P2P;
-    while (is_running) {
-        data.size = snprintf((char *)data.data, 200, "Status count: %d", count++);
-
-            // Wait for IP if needed
-            xEventGroupWaitBits(s_wifi_event_group, CONNECTED_BIT, false, true, portMAX_DELAY);
-            // Prepend own status and send collected statuses to AP via UDP
-            char full_status[1024];
-            snprintf(full_status, sizeof(full_status), "Root "MACSTR": Status count: %d<br>%.900s", MAC2STR(my_mac), count - 1, statuses);
-            struct sockaddr_in dest_addr;
-            int sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
-            if (sock >= 0) {
-                dest_addr.sin_addr.s_addr = inet_addr("192.168.4.1");
-                dest_addr.sin_family = AF_INET;
-                dest_addr.sin_port = htons(3333);
-                sendto(sock, full_status, strlen(full_status), 0, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
-                close(sock);
-            }
-            // Clear statuses after sending
-            statuses[0] = '\0';
-         
-        vTaskDelay(2000 / portTICK_PERIOD_MS); // Send every 2 seconds
     }
     free(data.data);
     vTaskDelete(NULL);
