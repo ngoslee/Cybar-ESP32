@@ -24,12 +24,23 @@ static char statuses[1024] = "";
 static uint8_t my_mac[6];
 static bool is_running = true;
 static esp_netif_t *sta_netif = NULL;
+static struct in_addr sta_ip_addr = {0};
+static int count = 0;
+
+
 
 static void ip_event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data) {
     ESP_LOGI(TAG, "IP event: %d", event_id);
     if (event_id == IP_EVENT_STA_GOT_IP) {
+        ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
+        sta_ip_addr.s_addr = event->ip_info.ip.addr;
+        ESP_LOGI(TAG, "Got IP address: %s GW %s mask %s", ip4addr_ntoa((ip4_addr_t *)&event->ip_info.ip.addr), ip4addr_ntoa((ip4_addr_t *)&event->ip_info.gw.addr), ip4addr_ntoa((ip4_addr_t *)&event->ip_info.netmask.addr));
+        ESP_LOGI(TAG, "STA netif: %p, flags: %x", event->esp_netif, esp_netif_get_flags(event->esp_netif));
         xEventGroupSetBits(s_wifi_event_group, CONNECTED_BIT);
         ESP_LOGI(TAG, "IP address is:" IPSTR, IP2STR(&((ip_event_got_ip_t *)event_data)->ip_info.ip));
+    } else if (event_id == IP_EVENT_STA_LOST_IP) {
+        xEventGroupClearBits(s_wifi_event_group, CONNECTED_BIT);
+        ESP_LOGI(TAG, "Lost IP address");
     }
 }
 
@@ -55,25 +66,51 @@ static void mesh_event_handler(void *arg, esp_event_base_t event_base, int32_t e
     if (event_id == MESH_EVENT_PARENT_CONNECTED) {
         mesh_layer = event->connected.self_layer;
         ESP_LOGI(TAG, "Connected to AP, layer: %d", mesh_layer);
-        if (esp_mesh_is_root()) {
-            ESP_LOGI(TAG, "Node is root, enabling DHCP client");
-            if (sta_netif) {
-
-                esp_netif_dhcpc_stop(sta_netif);
-                esp_netif_dhcpc_start(sta_netif);
-            } else {
-                ESP_LOGW(TAG, "No STA netif found for DHCP client");
-            }
-        }
     } else if (event_id == MESH_EVENT_LAYER_CHANGE) {
         mesh_layer = event->layer_change.new_layer;
         ESP_LOGI(TAG, "Layer changed: %d", mesh_layer);
     } else if (event_id == MESH_EVENT_ROOT_ADDRESS) {
         // Node is now the root, enable DHCP client
         ESP_LOGI(TAG, "Node is root, enabling DHCP client");
+        esp_wifi_connect();
+        sta_netif = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
+        if (sta_netif) {
+            esp_netif_dhcpc_stop(sta_netif);
+            int err = esp_netif_dhcpc_start(sta_netif);
+            if (err != ESP_OK) {
+                ESP_LOGE(TAG, "Failed to start DHCP client: %d", err);
+            } else {
+                ESP_LOGI(TAG, "DHCP client started");
+ //               esp_netif_set_priority(sta_netif, 100); // Ensure STA has higher priority than AP
+            }
+        } else {
+            ESP_LOGW(TAG, "No STA netif found for DHCP client"); 
+        }
     }
 }
+#define MESSAGE "Hello from mesh node!\n"
 
+static void udp_send_to_ap(void) {
+    // Send collected statuses to AP via UDP
+    struct sockaddr_in dest_addr;
+    int sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
+    if (sock >= 0) {
+        dest_addr.sin_addr.s_addr = inet_addr("192.168.4.1");
+        dest_addr.sin_family = AF_INET;
+        dest_addr.sin_port = htons(3333);
+//        if (sendto(sock, statuses, strlen(statuses), 0, (struct sockaddr *)&dest_addr, sizeof(dest_addr)) < 0) {
+        if (sendto(sock, MESSAGE, strlen(MESSAGE), 0, (struct sockaddr *)&dest_addr, sizeof(dest_addr)) < 0) {
+            ESP_LOGE(TAG, "Failed to send UDP message to AP");
+        } else {
+            ESP_LOGI(TAG, "Sent UDP message to AP: %s", statuses);
+        }
+        close(sock);
+        // Clear statuses after sending
+  //      statuses[0] = '\0';
+    } else {
+        ESP_LOGE(TAG, "Failed to create UDP socket");
+    }
+}
 static void recv_task(void *pvParameters) {
     mesh_addr_t from;
     mesh_data_t data;
@@ -91,9 +128,15 @@ static void recv_task(void *pvParameters) {
                 snprintf(temp, sizeof(temp), "From " MACSTR ": %s<br>", MAC2STR(from.addr), (char *)data.data);
                 strncat(statuses, temp, sizeof(statuses) - strlen(statuses) - 1);
                 ESP_LOGI(TAG, "Collected status: %s", temp);
+ //               udp_send_to_ap();
+ //               ESP_LOGI(TAG, "Sent collected statuses to AP");
+
             } else {
                 // Received broadcast (e.g., from PC), log it
-                ESP_LOGI(TAG, "Received broadcast: %s", (char *)data.data);
+                char temp[256];
+                data.data[data.size] = 0; // Null-terminate
+
+                ESP_LOGI(TAG, "Received broadcast: %s", temp);
             }
         } else {
             ESP_LOGE(TAG, "mesh_recv failed: %d %s",err, esp_err_to_name(err));
@@ -106,12 +149,69 @@ static void recv_task(void *pvParameters) {
 static void send_task(void *pvParameters) {
     int count = 0;
     mesh_data_t data;
+    int sent;
+    int err;
     data.data = (uint8_t *)malloc(200);
     data.proto = MESH_PROTO_BIN;
     data.tos = MESH_TOS_P2P;
     while (is_running) {
         data.size = snprintf((char *)data.data, 200, "Status count: %d", count++);
         if (esp_mesh_is_root()) {
+            // Wait for IP if needed
+            xEventGroupWaitBits(s_wifi_event_group, CONNECTED_BIT, false, true, portMAX_DELAY);
+            // Prepend own status and send collected statuses to AP via UDP
+            char full_status[1024];
+            snprintf(full_status, sizeof(full_status), "Root "MACSTR": Status count: %d<br>%.900s", MAC2STR(my_mac), count - 1, statuses);
+            struct sockaddr_in dest_addr;
+            int sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
+            if (sock >= 0) {
+                struct sockaddr_in local_addr;
+                local_addr.sin_addr.s_addr = sta_ip_addr.s_addr; // Use assigned IP
+                local_addr.sin_family = AF_INET;
+                local_addr.sin_port = htons(0); // Any port
+                if ((err=bind(sock, (struct sockaddr *)&local_addr, sizeof(local_addr))) < 0) {
+                    ESP_LOGE(TAG, "Failed to bind UDP socket %d", err);                    
+                }
+
+
+                dest_addr.sin_addr.s_addr = inet_addr("192.168.4.1");
+                dest_addr.sin_family = AF_INET;
+                dest_addr.sin_port = htons(3333);
+
+                //Disable self-organized networking
+//esp_mesh_set_self_organized(0, 0);
+                sent = sendto(sock, full_status, strlen(full_status), 0, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
+                //Re-enable self-organized networking if still connected
+//esp_mesh_set_self_organized(1, 0);
+                if (sent < 0) {
+                    ESP_LOGE(TAG, "Error occurred during sending: errno %d", errno);
+                } else {
+                    ESP_LOGI(TAG, "Sent message to AP: %08X port: %d len: %d %s", 
+                         dest_addr.sin_addr.s_addr, ntohs(dest_addr.sin_port), sent, full_status);
+                }
+                close(sock);
+            }
+            // Clear statuses after sending
+            statuses[0] = '\0';
+        } else {
+            // Send status to root
+            esp_mesh_send(NULL, &data, MESH_DATA_TODS, NULL, 0);
+        }
+        vTaskDelay(5000 / portTICK_PERIOD_MS); // Send every 5 seconds
+    }
+    free(data.data);
+    vTaskDelete(NULL);
+}
+
+static void just_send_task(void *pvParameters) {
+    int count = 0;
+    mesh_data_t data;
+    data.data = (uint8_t *)malloc(200);
+    data.proto = MESH_PROTO_BIN;
+    data.tos = MESH_TOS_P2P;
+    while (is_running) {
+        data.size = snprintf((char *)data.data, 200, "Status count: %d", count++);
+
             // Wait for IP if needed
             xEventGroupWaitBits(s_wifi_event_group, CONNECTED_BIT, false, true, portMAX_DELAY);
             // Prepend own status and send collected statuses to AP via UDP
@@ -128,11 +228,8 @@ static void send_task(void *pvParameters) {
             }
             // Clear statuses after sending
             statuses[0] = '\0';
-        } else {
-            // Send status to root
-            esp_mesh_send(NULL, &data, MESH_DATA_TODS, NULL, 0);
-        }
-        vTaskDelay(5000 / portTICK_PERIOD_MS); // Send every 5 seconds
+         
+        vTaskDelay(2000 / portTICK_PERIOD_MS); // Send every 2 seconds
     }
     free(data.data);
     vTaskDelete(NULL);
@@ -201,10 +298,7 @@ void mesh_node_init(void) {
     s_wifi_event_group = xEventGroupCreate();
     ESP_ERROR_CHECK(esp_event_loop_create_default());
 
-    ESP_ERROR_CHECK(esp_netif_create_default_wifi_mesh_netifs(&sta_netif, NULL));
-
-
-
+    ESP_ERROR_CHECK(esp_netif_create_default_wifi_mesh_netifs(NULL, NULL));
 
 
     ESP_LOGI(TAG, "WiFi initializing...");    
@@ -214,6 +308,7 @@ void mesh_node_init(void) {
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
     ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT, ESP_EVENT_ANY_ID, &ip_event_handler, NULL, NULL));
     ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL, NULL));
+    ESP_ERROR_CHECK(esp_event_handler_instance_register(MESH_EVENT, ESP_EVENT_ANY_ID, &mesh_event_handler, NULL, NULL));
     
     ESP_ERROR_CHECK(esp_wifi_start());
 
@@ -229,7 +324,6 @@ void mesh_node_init(void) {
     memcpy((uint8_t *)&mesh_cfg.router.password, "password", strlen("password"));
     ESP_LOGI(TAG, "Mesh initializing...");
     ESP_ERROR_CHECK(esp_mesh_init());
-    ESP_ERROR_CHECK(esp_event_handler_instance_register(MESH_EVENT, ESP_EVENT_ANY_ID, &mesh_event_handler, NULL, NULL));
     ESP_ERROR_CHECK(esp_mesh_set_config(&mesh_cfg));
     ESP_LOGI(TAG, "Mesh Starting...");
     ESP_ERROR_CHECK(esp_mesh_start());

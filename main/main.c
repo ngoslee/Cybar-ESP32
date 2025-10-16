@@ -26,6 +26,7 @@
 #include "system.h"
 #include "web_mesh.h"
 #include "mesh_node.h"
+#include "wifi.h"
 #define TAG "MAIN"
 
 
@@ -57,6 +58,8 @@ void app_main(void)
 //web_mesh_init();
 mesh_node_init();
  //   spp_init();
+ //wifi_init();
+
     diag_uart_init();
 
     while (1) {

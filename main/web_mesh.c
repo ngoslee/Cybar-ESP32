@@ -35,7 +35,7 @@ static void udp_server_task(void *pvParameters) {
         close(sock);
         vTaskDelete(NULL);
     }
-
+    ESP_LOGI(TAG, "Socket bound, waiting for data...");
     while (1) {
         struct sockaddr_in source_addr;
         socklen_t addr_len = sizeof(source_addr);
@@ -44,7 +44,7 @@ static void udp_server_task(void *pvParameters) {
         if (len > 0) {
             rx_buffer[len] = 0;
             strncpy(statuses, rx_buffer, sizeof(statuses) - 1);
-            ESP_LOGI(TAG, "Received status update from root");
+            ESP_LOGI(TAG, "Received status update from root %s", statuses);
         } else {
             ESP_LOGE(TAG, "recvfrom failed: errno %d", errno);
         }
@@ -125,7 +125,11 @@ static void wifi_init_softap(void) {
     ESP_LOGI(TAG, "SoftAP started: SSID=%s, password=%s, IP=%s", "mesh_ap", "password", "192.168.4.1");
 }
 void web_mesh_init(void) {
+    ESP_LOGI(TAG, "Initializing WiFi SoftAP...");
     wifi_init_softap();
-    start_webserver();
+    ESP_LOGI(TAG, "Starting UDP server task...");
     xTaskCreate(udp_server_task, "udp_server", 4096, NULL, 5, NULL);
+    ESP_LOGI(TAG, "Starting web server...");
+    start_webserver();
+
 }
