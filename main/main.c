@@ -55,8 +55,15 @@ void app_main(void)
     ESP_ERROR_CHECK( ret );
 
 //    web_server_init();
+    if (system_get_node_type() == NODE_TYPE_MODULE) {
+        mesh_node_init();
+        ESP_LOGI(TAG, "Mesh node started" );
+    } else {
+        web_mesh_init();
+        ESP_LOGI(TAG, "Web node started" );
+    }
 //web_mesh_init();
-mesh_node_init();
+//mesh_node_init();
  //   spp_init();
 
     diag_uart_init();

@@ -89,9 +89,10 @@ void hw_led_init(void) {
     led_strip_clear(led_strip);
 
 }
-
+static uint8_t fixed = 0;
 void hw_toggle_led(void)
 {
+    if (fixed) return;
     /* Toggle the LED state */
     s_led_state++;
     if (s_led_state > 3) s_led_state = 0;
@@ -106,6 +107,15 @@ void hw_toggle_led(void)
         /* Set all LED off to clear all pixels */
         led_strip_clear(led_strip);
     }
+}
+
+void hw_led_set_color(uint8_t r, uint8_t g, uint8_t b)
+{
+    fixed = 1;
+    /* Set the LED pixel using RGB from 0 (0%) to 255 (100%) for each color */
+    led_strip_set_pixel(led_strip, 0, r, g, b);
+    /* Refresh the strip to send data */
+    led_strip_refresh(led_strip);
 }
 
 void hw_lin_enable(void)

@@ -12,6 +12,7 @@
 #include "egg.h"
 #include "user.h"
 #include "web_server.h"
+#include "mesh_node.h"
 
 static const char *TAG = "EGG";
 
@@ -23,7 +24,7 @@ typedef enum {
 
 static egg_state_enum_t egg_state = EGG_WAIT_42;
 static uint16_t timeout;
-static lin_bar_command_t msg_prev, user_cmd_prev, truck_cmd_prev, diag_cmd_prev, web_cmd_prev, cmd_prev;
+static lin_bar_command_t user_cmd_prev, truck_cmd_prev, diag_cmd_prev, web_cmd_prev, cmd_prev, mesh_cmd_prev;
 
 uint8_t update_if_new(lin_bar_command_t * prev, lin_bar_command_t * current, lin_bar_command_t * out) {
     if (memcmp(prev, current, sizeof(lin_bar_command_t))) {
@@ -35,14 +36,26 @@ uint8_t update_if_new(lin_bar_command_t * prev, lin_bar_command_t * current, lin
 }
 
 void egg_msg_handler(void) {
-
+    static uint16_t mode_delay = 100;
     uint8_t changed = 0;
-    lin_bar_command_t diag_cmd, user_cmd, truck_cmd, final_cmd, web_cmd;
+    lin_bar_command_t diag_cmd, user_cmd, truck_cmd, final_cmd, web_cmd, mesh_cmd;
     memcpy(final_cmd.bytes, cmd_prev.bytes, 8);
     truck_get_command(truck_cmd.bytes);
     if ( update_if_new(&truck_cmd_prev, &truck_cmd, &final_cmd)) {
         changed  = 1;
+        mode_delay = 100;
    //     ESP_LOGI(TAG, "truck command %d %d %d %d %d %d ", truck_cmd.values.value0, truck_cmd.values.value1, truck_cmd.values.value2, truck_cmd.values.value3, truck_cmd.values.value4, truck_cmd.values.value5);
+    }
+    if (mode_delay) {
+        mode_delay--;
+    }
+    //don't act on stale LIN commnads
+    if ((mode_delay ==0) || (!mesh_mode_is_lin())) {
+        mesh_get_command(mesh_cmd.bytes);
+        if (update_if_new(&mesh_cmd_prev, &mesh_cmd, &final_cmd)) {
+            changed  = 1;
+            ESP_LOGI(TAG, "mesh command %d %d %d %d %d %d ", mesh_cmd.values.value0, mesh_cmd.values.value1, mesh_cmd.values.value2, mesh_cmd.values.value3, mesh_cmd.values.value4, mesh_cmd.values.value5);
+        }
     }
     user_get_command(user_cmd.bytes);
     if ( update_if_new(&user_cmd_prev, &user_cmd, &final_cmd)) {

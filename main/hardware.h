@@ -19,5 +19,6 @@ void hw_led_init(void);
 void hw_toggle_led(void);
 void hw_lin_enable(void);
 void hw_load_set_cmd(uint8_t * cmd);
+void hw_led_set_color(uint8_t r, uint8_t g, uint8_t b);
 
 #endif

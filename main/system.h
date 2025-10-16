@@ -22,6 +22,13 @@ typedef enum {
     LIN_MODE_BAR = 3, //act as bar, no pass through
     LIN_MODE_NUM
 } system_lin_mode_enum_t;
+
+typedef enum {
+    NODE_TYPE_WEB = 0,
+    NODE_TYPE_MODULE = 1,
+    NODE_TYPE_NUM
+} system_node_type_enum_t;
+system_node_type_enum_t system_get_node_type(void);
 void system_set_lin_mode(system_lin_mode_enum_t mode);
 system_lin_mode_enum_t system_get_lin_mode(void);
 

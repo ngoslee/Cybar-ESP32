@@ -82,6 +82,9 @@ static esp_err_t root_post_handler(httpd_req_t *req) {
             dest_addr.sin_addr.s_addr = inet_addr("192.168.4.2");
             dest_addr.sin_family = AF_INET;
             dest_addr.sin_port = htons(3334);
+            for(int i=0; i<strlen(message_start); i++) {
+                if (message_start[i] == '+') message_start[i] = ' ';
+            }
             sendto(sock, message_start, strlen(message_start), 0, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
             close(sock);
             ESP_LOGI(TAG, "Sent message to root: %s", message_start);
