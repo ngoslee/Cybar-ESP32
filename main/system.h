@@ -24,8 +24,8 @@ typedef enum {
 } system_lin_mode_enum_t;
 
 typedef enum {
-    NODE_TYPE_WEB = 0,
-    NODE_TYPE_MODULE = 1,
+    NODE_TYPE_WEB = 0, //LIN in and out, web interface
+    NODE_TYPE_MODULE = 1, //LIN in and out, no web, mesh node
     NODE_TYPE_NUM
 } system_node_type_enum_t;
 system_node_type_enum_t system_get_node_type(void);

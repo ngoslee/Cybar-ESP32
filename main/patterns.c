@@ -25,6 +25,7 @@ void sequenceSelect(seq_enum_t newSequence) {
     if ((newSequence < SEQ_COUNT) && (seq_active != newSequence)) {
         seq_timer = 0;
         seq_active = newSequence;
+        
  //       ESP_LOGI(TAG, "sequence  %d", seq_active);
     }
 }

@@ -80,7 +80,7 @@ void system_init(void)
             system_set_node_type(module[i].node_type);
             strncpy(system_name, module[i].name, sizeof(system_name)-1);
             system_name[sizeof(system_name)-1] = 0;
-            ESP_LOGI("SYS", "Module %s, Load mode: %d, LIN mode: %d Node type:", module[i].name, module[i].load_mode, module[i].lin_mode, module[i].node_type);
+            ESP_LOGI("SYS", "Module %s, Load mode: %d, LIN mode: %d Node type: %d", module[i].name, module[i].load_mode, module[i].lin_mode, module[i].node_type);
             known = true;
             break;
         }

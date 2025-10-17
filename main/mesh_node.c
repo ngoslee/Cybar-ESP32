@@ -276,53 +276,6 @@ void mesh_event_handler(void *arg, esp_event_base_t event_base,
     }
 }
 
-
-static void mesh_event_handler_org(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data) {
-    ESP_LOGI(TAG, "Mesh event: %d", event_id);
-    mesh_event_info_t *event = (mesh_event_info_t *)event_data;
-    if (event_id == MESH_EVENT_PARENT_CONNECTED) {
-        mesh_layer = event->connected.self_layer;
-        ESP_LOGI(TAG, "Connected to AP, layer: %d", mesh_layer);
-    } else if (event_id == MESH_EVENT_LAYER_CHANGE) {
-        mesh_layer = event->layer_change.new_layer;
-        ESP_LOGI(TAG, "Layer changed: %d", mesh_layer);
-    } else if (event_id == MESH_EVENT_ROOT_ADDRESS) {
-        sta_netif = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
-        if (esp_mesh_is_root()) {
-            // Node is now the root, enable DHCP client
-            ESP_LOGI(TAG, "Node is root, enabling DHCP client");
-
-            if (sta_netif) {
-                esp_netif_dhcpc_stop(sta_netif);
-                int err = esp_netif_dhcpc_start(sta_netif);
-                if (err != ESP_OK) {
-                    ESP_LOGE(TAG, "Failed to start DHCP client: %d", err);
-                } else {
-                    ESP_LOGI(TAG, "DHCP client started");
-    //               esp_netif_set_priority(sta_netif, 100); // Ensure STA has higher priority than AP
-                }
-                esp_wifi_connect();
-            } else {
-                ESP_LOGW(TAG, "No STA netif found for DHCP client"); 
-            }
-        } else {
-            // Node is no longer root, disable DHCP client
-            ESP_LOGI(TAG, "Node is no longer root, disabling DHCP client");
-           // esp_wifi_disconnect();
-            if (sta_netif) {
-                esp_netif_dhcpc_stop(sta_netif);
-                sta_ip_addr.s_addr = 0;
-                xEventGroupClearBits(s_wifi_event_group, CONNECTED_BIT);
-                
-            }
-        }
-    } else if (event_id == MESH_EVENT_PARENT_DISCONNECTED) {
-        mesh_layer = -1;
-        ESP_LOGI(TAG, "Disconnected from parent");
-        xEventGroupClearBits(s_wifi_event_group, CONNECTED_BIT);
-    }
-}
-
 static void recv_task(void *pvParameters) { 
     mesh_addr_t from;
     mesh_data_t data;

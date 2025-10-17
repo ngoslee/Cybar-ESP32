@@ -171,7 +171,7 @@ static void hw_load_task(void *arg) {
 
     //inital setup:
   //  adc_digi_start();
-    vTaskDelay(pdMS_TO_TICKS(2000));
+  //  vTaskDelay(pdMS_TO_TICKS(2000));
     ESP_LOGI("HW", "HW Task started");
     adc_continuous_start(adc_handle);
     while (1) {

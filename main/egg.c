@@ -12,6 +12,7 @@
 #include "egg.h"
 #include "web_server.h"
 #include "mesh_node.h"
+#include "system.h"
 
 static const char *TAG = "EGG";
 
@@ -49,15 +50,20 @@ void egg_msg_handler(void) {
     }
     if (mode_delay) {
         mode_delay--;
+        if (mode_delay == 0) {
+            ESP_LOGW(TAG, "LIN replacement active");
+        }
     }
 
-    //leaf nodes use mesh as a fall back for LIN
-    //but if LIN is active, don't use mesh version
-    if ((mode_delay ==0) || (!mesh_mode_is_lin())) {
-        mesh_get_command(mesh_cmd.bytes);
-        if (update_if_new(&mesh_cmd_prev, &mesh_cmd, &final_cmd)) {
-            changed  = 2;
-   //         ESP_LOGI(TAG, "mesh command %d %d %d %d %d %d ", mesh_cmd.values.value0, mesh_cmd.values.value1, mesh_cmd.values.value2, mesh_cmd.values.value3, mesh_cmd.values.value4, mesh_cmd.values.value5);
+    if (system_get_node_type() == NODE_TYPE_MODULE) {   
+        //leaf nodes use mesh as a fall back for LIN
+        //but if LIN is active, don't use mesh version
+        if ((mode_delay ==0) || (!mesh_mode_is_lin())) {
+            mesh_get_command(mesh_cmd.bytes);
+            if (update_if_new(&mesh_cmd_prev, &mesh_cmd, &final_cmd)) {
+                changed  = 2;
+    //         ESP_LOGI(TAG, "mesh command %d %d %d %d %d %d ", mesh_cmd.values.value0, mesh_cmd.values.value1, mesh_cmd.values.value2, mesh_cmd.values.value3, mesh_cmd.values.value4, mesh_cmd.values.value5);
+            }
         }
     }
 
@@ -67,78 +73,90 @@ void egg_msg_handler(void) {
  //       ESP_LOGI(TAG, "diag command %d %d %d %d %d %d ", diag_cmd.values.value0, diag_cmd.values.value1, diag_cmd.values.value2, diag_cmd.values.value3, diag_cmd.values.value4, diag_cmd.values.value5);
     }
 
-    web_get_command(web_cmd.bytes);
-    if (update_if_new(&web_cmd_prev, &web_cmd, &final_cmd)) {
-        changed  = 5;
-        ESP_LOGI(TAG, "web command %d %d %d %d %d %d ", web_cmd.values.value0, web_cmd.values.value1, web_cmd.values.value2, web_cmd.values.value3, web_cmd.values.value4, web_cmd.values.value5);
+    if (system_get_node_type() == NODE_TYPE_WEB) {
+        //web nodes always use web command if changed}
+        web_get_command(web_cmd.bytes);
+        if (update_if_new(&web_cmd_prev, &web_cmd, &final_cmd)) {
+            changed  = 5;
+            ESP_LOGI(TAG, "web command %d %d %d %d %d %d ", web_cmd.values.value0, web_cmd.values.value1, web_cmd.values.value2, web_cmd.values.value3, web_cmd.values.value4, web_cmd.values.value5);
+        }
     }
 
-    if (changed == 0) return;
-    memcpy(cmd_prev.bytes, final_cmd.bytes, 8);
+    if (changed != 0) {
+        memcpy(cmd_prev.bytes, final_cmd.bytes, 8);
 
-        //now add easter egg
-    /* if command is side lights on, main off and 42 brightness is selected followed by 69, engage KITT , truck_cmd.values.value0, truck, truck_cmd.values.value0, truck_cmd.values.value0_cmd.values.value0
-    if lights are alll off, disable it*/
-    
-    //are mains off?
-    switch(egg_state) {
-        case EGG_WAIT_42:
-            if ((final_cmd.values.value1 == 42) || (final_cmd.values.value0 == 42)) {
-                ESP_LOGI(TAG, "Wait 69");
-                egg_state = EGG_WAIT_69;
-                timeout = 2000 / 20; //three seconds to select 69
-            } 
-            break;
+        if (system_get_lin_mode() == LIN_MODE_MIM) {
+            
+                //now add easter egg
+            /* if command is side lights on, main off and 42 brightness is selected followed by 69, engage KITT , truck_cmd.values.value0, truck, truck_cmd.values.value0, truck_cmd.values.value0_cmd.values.value0
+            if lights are alll off, disable it*/
+            
+            //are mains off?
+            switch(egg_state) {
+                case EGG_WAIT_42:
+                    if ((final_cmd.values.value1 == 42) || (final_cmd.values.value0 == 42)) {
+                        ESP_LOGI(TAG, "Wait 69");
+                        egg_state = EGG_WAIT_69;
+                        timeout = 2000 / 20; //three seconds to select 69
+                    } 
+                    break;
 
-        case EGG_WAIT_69:
-            if  ((final_cmd.values.value1 == 42) || (final_cmd.values.value0 == 42)) {
-                timeout = 2000 / 20; //three seconds to select 69
-            }
-            else if ((final_cmd.values.value1 == 69) || (final_cmd.values.value0 == 69)){
-                ESP_LOGI(TAG, "Active");
-                egg_state = EGG_ACTIVE;
-            } else if (((final_cmd.values.value0 < 60) && (final_cmd.values.value0 >= 50)) || ((final_cmd.values.value1 < 60) && (final_cmd.values.value1 >= 50)) ) {
-                ESP_LOGI(TAG, "50s ");
-                egg_state = EGG_WAIT_42;
-            } else {
-                if (--timeout == 0) {
+                case EGG_WAIT_69:
+                    if  ((final_cmd.values.value1 == 42) || (final_cmd.values.value0 == 42)) {
+                        timeout = 2000 / 20; //three seconds to select 69
+                    }
+                    else if ((final_cmd.values.value1 == 69) || (final_cmd.values.value0 == 69)){
+                        ESP_LOGI(TAG, "Active");
+                        egg_state = EGG_ACTIVE;
+                    } else if (((final_cmd.values.value0 < 60) && (final_cmd.values.value0 >= 50)) || ((final_cmd.values.value1 < 60) && (final_cmd.values.value1 >= 50)) ) {
+                        ESP_LOGI(TAG, "50s ");
+                        egg_state = EGG_WAIT_42;
+                    } else {
+                        if (--timeout == 0) {
+                            egg_state = EGG_WAIT_42;
+                            ESP_LOGI(TAG, "Timeout");
+                        }
+                    }
+                    break;
+
+                case EGG_ACTIVE:    
+                    break;
+
+                default:
                     egg_state = EGG_WAIT_42;
-                    ESP_LOGI(TAG, "Timeout");
-                }
+                    break;        
+            }    
+            //put after switch to take effect immediately
+            if (egg_state == EGG_ACTIVE) {
+                    if ((final_cmd.values.value0 == 0) && (final_cmd.values.value1 == 100)) {
+                        sequenceSelect(SEQ_IDLE);
+                        egg_state = EGG_WAIT_42;
+                        ESP_LOGI(TAG, "Off");
+                    } else if ((final_cmd.values.value0 == 0 ) && (final_cmd.values.value1 > 0)) {
+                        sequenceSelect(SEQ_KITT);
+                    } else if ((final_cmd.values.value0 > 0 ) && (final_cmd.values.value1 > 0)) {
+                        sequenceSelect(SEQ_SWEEP);
+                    } else if ((final_cmd.values.value0 > 0 ) && (final_cmd.values.value1 == 0)) {
+                        sequenceSelect(SEQ_WIG_WAG);
+                    }
             }
-            break;
-
-        case EGG_ACTIVE:    
-            break;
-
-        default:
-            egg_state = EGG_WAIT_42;
-            break;        
-    }    
-    //put after switch to take effect immediately
-    if (egg_state == EGG_ACTIVE) {
-            if ((final_cmd.values.value0 == 0) && (final_cmd.values.value1 == 100)) {
-                sequenceSelect(SEQ_IDLE);
-                egg_state = EGG_WAIT_42;
-                ESP_LOGI(TAG, "Off");
-            } else if ((final_cmd.values.value0 == 0 ) && (final_cmd.values.value1 > 0)) {
-                sequenceSelect(SEQ_KITT);
-            } else if ((final_cmd.values.value0 > 0 ) && (final_cmd.values.value1 > 0)) {
-                sequenceSelect(SEQ_SWEEP);
-            } else if ((final_cmd.values.value0 > 0 ) && (final_cmd.values.value1 == 0)) {
-                sequenceSelect(SEQ_WIG_WAG);
-            }
+        }
+        bar_lin_truck_cmd(final_cmd.bytes);
     }
-    if (egg_state == EGG_ACTIVE) {        
+    
+    if (sequenceActive()) {        
         changed = 6;
     }
-    if (changed >= 2) {
-        
+    ESP_LOGD(TAG, "Changed %d", changed);
+        //laave flag alone for if no change
+    if (changed >= 2) {        
         use_lin = 0;
-    } else {
+    } else if (changed ==1) {
         use_lin = 1;
     }
-    bar_lin_truck_cmd(final_cmd.bytes);
+    ESP_LOGD(TAG, "LIN mode use_lin %d", use_lin);
+
+
   //  hw_load_set_cmd(final_cmd.bytes);
 }
 

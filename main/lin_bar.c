@@ -19,6 +19,7 @@
 #include "hardware.h"
 #include "web_mesh.h"
 #include "egg.h"
+#include "system.h"
 
 #define BAR_LIN_UART_PORT UART_NUM_1
 
@@ -79,14 +80,14 @@ void truck_input(uint16_t * data) {
     truck_cmd_flag = 0;    
 }
 
-// Periodic LIN task
+// Periodic LIN task also handle loads
 static void bar_lin_task(void *arg) {
     static uint16_t newValues[6];
     uint16_t values_final[6];
 
 
     while (1) {   
-        truck_input(newValues); //updates if truck sent value
+        truck_input(newValues); //updates on new values
 
 
         sequenceNext(newValues, values_final); //overrides if mode active
@@ -100,7 +101,10 @@ static void bar_lin_task(void *arg) {
         load_cmd.values.value4 = values_final[4];
         load_cmd.values.value5 = values_final[5];
 
-        mesh_update(!egg_is_lin_mode(), &load_cmd); //overrides if mesh command
+        //if control node, send out update to mesh
+        if (system_get_node_type() == NODE_TYPE_WEB) {
+            mesh_update(!egg_is_lin_mode(), &load_cmd); //overrides if mesh command
+        }
         hw_load_set_cmd(load_cmd.bytes);
 
         bar_lin_set_tx_data(values_final, tx_data_shadow); //convert to bitfield
