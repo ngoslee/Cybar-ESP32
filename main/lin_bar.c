@@ -103,7 +103,7 @@ static void bar_lin_task(void *arg) {
         load_cmd.values.value4 = values_final[4];
         load_cmd.values.value5 = values_final[5];
 
-        mesh_update(egg_is_lin_mode(), &load_cmd); //overrides if mesh command
+        mesh_update(!egg_is_lin_mode(), &load_cmd); //overrides if mesh command
         hw_load_set_cmd(load_cmd.bytes);
 
         bar_lin_set_tx_data(values_final, tx_data_shadow); //convert to bitfield

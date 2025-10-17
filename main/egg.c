@@ -51,12 +51,14 @@ void egg_msg_handler(void) {
     if (mode_delay) {
         mode_delay--;
     }
-    //don't act on stale LIN commnads
+
+    //leaf nodes use mesh as a fall back for LIN
+    //but if LIN is active, don't use mesh version
     if ((mode_delay ==0) || (!mesh_mode_is_lin())) {
         mesh_get_command(mesh_cmd.bytes);
         if (update_if_new(&mesh_cmd_prev, &mesh_cmd, &final_cmd)) {
             changed  = 2;
-            ESP_LOGI(TAG, "mesh command %d %d %d %d %d %d ", mesh_cmd.values.value0, mesh_cmd.values.value1, mesh_cmd.values.value2, mesh_cmd.values.value3, mesh_cmd.values.value4, mesh_cmd.values.value5);
+   //         ESP_LOGI(TAG, "mesh command %d %d %d %d %d %d ", mesh_cmd.values.value0, mesh_cmd.values.value1, mesh_cmd.values.value2, mesh_cmd.values.value3, mesh_cmd.values.value4, mesh_cmd.values.value5);
         }
     }
     user_get_command(user_cmd.bytes);
@@ -135,7 +137,7 @@ void egg_msg_handler(void) {
     if (egg_state == EGG_ACTIVE) {        
         changed = 6;
     }
-    if (changed >= 3) {
+    if (changed >= 2) {
         
         use_lin = 0;
     } else {

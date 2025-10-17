@@ -46,7 +46,7 @@ static void udp_server_task(void *pvParameters) {
         if (len > 0) {
             rx_buffer[len] = 0;
             strncpy(statuses, rx_buffer, sizeof(statuses) - 1);
-            ESP_LOGI(TAG, "Received status update from root %s", statuses);
+            ESP_LOGD(TAG, "Received status update from root %s", statuses);
         } else {
             ESP_LOGE(TAG, "recvfrom failed: errno %d", errno);
         }
@@ -77,7 +77,7 @@ esp_err_t send_to_mesh(const char *msg, size_t len) {
         dest_addr.sin_port = htons(3334);
         sendto(sock, msg, len, 0, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
         close(sock);
-        ESP_LOGI(TAG, "Sent message to root: %s", msg);
+        ESP_LOGD(TAG, "Sent message to root: %s", msg);
         return ESP_OK;
     }
     ESP_LOGE(TAG, "Failed to create socket to send message to root");
@@ -155,7 +155,7 @@ void mesh_update(bool override, lin_bar_command_t * newValues) {
     char temp[255];
     size_t len;
     if (!link_up) return;
-    
+
     if (override) {
        len = sprintf(temp, "OVR %d %d %d %d %d %d", newValues->values.value0, newValues->values.value1, newValues->values.value2, newValues->values.value3, newValues->values.value4, newValues->values.value5);
     } else {
