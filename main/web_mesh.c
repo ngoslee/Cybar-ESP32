@@ -15,9 +15,11 @@
 #include "esp_http_server.h"
 #include "lwip/sockets.h"
 #include "lwip/netdb.h"
+#include "lin_bar.h"
 
 static const char *TAG = "main_ap";
 static char statuses[1024] = "No statuses yet.";
+static bool link_up = false;
 
 static void udp_server_task(void *pvParameters) {
     struct sockaddr_in dest_addr;
@@ -137,6 +139,7 @@ static void wifi_init_softap(void) {
     esp_wifi_set_config(WIFI_IF_AP, &wifi_config);
     esp_wifi_start();
     ESP_LOGI(TAG, "SoftAP started: SSID=%s, password=%s, IP=%s", "mesh_ap", "password", "192.168.4.1");
+    link_up = true;
 }
 void web_mesh_init(void) {
     ESP_LOGI(TAG, "Initializing WiFi SoftAP...");
@@ -147,3 +150,16 @@ void web_mesh_init(void) {
     start_webserver();
 
 }
+
+void mesh_update(bool override, lin_bar_command_t * newValues) {
+    char temp[255];
+    size_t len;
+    if (!link_up) return;
+    
+    if (override) {
+       len = sprintf(temp, "OVR %d %d %d %d %d %d", newValues->values.value0, newValues->values.value1, newValues->values.value2, newValues->values.value3, newValues->values.value4, newValues->values.value5);
+    } else {
+        len = sprintf(temp, "LIN %d %d %d %d %d %d", newValues->values.value0, newValues->values.value1, newValues->values.value2, newValues->values.value3, newValues->values.value4, newValues->values.value5);
+    }
+    send_to_mesh(temp, len);
+}   

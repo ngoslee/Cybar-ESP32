@@ -6,5 +6,6 @@
 #include "esp_mac.h"
 
 void egg_msg_handler(void);
+bool egg_is_lin_mode(void);
 
 #endif
