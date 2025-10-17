@@ -13,12 +13,10 @@
 #include "soc/uart_struct.h"
 
 #include "lin.h"
-#include "user.h"
 #include "patterns.h"
 #include "lin_truck.h"
 #include "pinout.h"
 #include "hardware.h"
-#include "user.h"
 #include "web_mesh.h"
 #include "egg.h"
 
@@ -87,8 +85,7 @@ static void bar_lin_task(void *arg) {
     uint16_t values_final[6];
 
 
-    while (1) {
-        update_user_input(); //update on user command        
+    while (1) {   
         truck_input(newValues); //updates if truck sent value
 
 

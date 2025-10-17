@@ -10,7 +10,6 @@
 #include "lin_truck.h"
 #include "diag_port.h"
 #include "egg.h"
-#include "user.h"
 #include "web_server.h"
 #include "mesh_node.h"
 
@@ -24,7 +23,7 @@ typedef enum {
 
 static egg_state_enum_t egg_state = EGG_WAIT_42;
 static uint16_t timeout;
-static lin_bar_command_t user_cmd_prev, truck_cmd_prev, diag_cmd_prev, web_cmd_prev, cmd_prev, mesh_cmd_prev;
+static lin_bar_command_t truck_cmd_prev, diag_cmd_prev, web_cmd_prev, cmd_prev, mesh_cmd_prev;
 static uint8_t use_lin = 1;
 
 uint8_t update_if_new(lin_bar_command_t * prev, lin_bar_command_t * current, lin_bar_command_t * out) {
@@ -39,7 +38,7 @@ uint8_t update_if_new(lin_bar_command_t * prev, lin_bar_command_t * current, lin
 void egg_msg_handler(void) {
     static uint16_t mode_delay = 100;
     uint8_t changed = 0;
-    lin_bar_command_t diag_cmd, user_cmd, truck_cmd, final_cmd, web_cmd, mesh_cmd;
+    lin_bar_command_t diag_cmd, truck_cmd, final_cmd, web_cmd, mesh_cmd;
     memcpy(final_cmd.bytes, cmd_prev.bytes, 8);
 
     truck_get_command(truck_cmd.bytes);
@@ -61,11 +60,7 @@ void egg_msg_handler(void) {
    //         ESP_LOGI(TAG, "mesh command %d %d %d %d %d %d ", mesh_cmd.values.value0, mesh_cmd.values.value1, mesh_cmd.values.value2, mesh_cmd.values.value3, mesh_cmd.values.value4, mesh_cmd.values.value5);
         }
     }
-    user_get_command(user_cmd.bytes);
-    if ( update_if_new(&user_cmd_prev, &user_cmd, &final_cmd)) {
-        changed  = 3;
- //       ESP_LOGI(TAG, "user command %d %d %d %d %d %d ", user_cmd.values.value0, user_cmd.values.value1, user_cmd.values.value2, user_cmd.values.value3, user_cmd.values.value4, user_cmd.values.value5);
-    }
+
     diag_get_command(diag_cmd.bytes);
     if (update_if_new(&diag_cmd_prev, &diag_cmd, &final_cmd)) {
         changed  = 4;
