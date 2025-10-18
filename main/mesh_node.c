@@ -20,7 +20,7 @@
 #define CONFIG_MESH_ROUTE_TABLE_SIZE 10
 
 void message_handler(const char *msg);
-
+static uint32_t timing =0 ;
 static const char *TAG = "mesh_module";
 static EventGroupHandle_t s_wifi_event_group;
 const int CONNECTED_BIT = BIT0;
@@ -389,6 +389,8 @@ static void udp_recv_from_ap_task(void *pvParameters) {
         int len = recvfrom(sock, rx_buffer, sizeof(rx_buffer) - 1, 0, (struct sockaddr *)&source_addr, &addr_len);
         if (len > 0) {
             ESP_LOGD(TAG, "**** Node received data from AP");
+            if (!timing) timing = esp_log_timestamp();
+
             rx_buffer[len] = 0;
             // Broadcast message to mesh nodes
             mesh_data_t data;
@@ -401,6 +403,10 @@ static void udp_recv_from_ap_task(void *pvParameters) {
                                    CONFIG_MESH_ROUTE_TABLE_SIZE * 6, &route_table_size);
 
             for (i = 0; i < route_table_size; i++) {
+                if (memcmp(route_table[i].addr, my_mac, 6) == 0) {
+                    // Don't send to self
+                    continue;
+                }
                 err = esp_mesh_send(&route_table[i], &data, MESH_DATA_P2P, NULL, 0);
                 if (err) {
                     ESP_LOGE(TAG,
@@ -418,6 +424,14 @@ static void udp_recv_from_ap_task(void *pvParameters) {
                             err, data.proto, data.tos);
                 }
                 send_count++;
+            }
+            if (timing) {
+                uint32_t now = esp_log_timestamp();
+                uint32_t diff = now - timing;
+                if (diff > 40) {
+                    ESP_LOGW("FAST", " %d ms", diff);
+                } 
+                timing = 0;
             }
             //handle message
             message_handler((char *)rx_buffer);
@@ -460,6 +474,13 @@ void mesh_node_init(void) {
     ESP_LOGI(TAG, "Mesh initializing...");
     ESP_ERROR_CHECK(esp_mesh_init());
     ESP_ERROR_CHECK(esp_mesh_set_config(&mesh_cfg));
+    
+    if (esp_mesh_is_ps_enabled()) {
+        ESP_LOGI(TAG, "Mesh power savings enabled, disabling...");
+        ESP_ERROR_CHECK(esp_mesh_disable_ps());
+        ESP_ERROR_CHECK(esp_mesh_set_ap_assoc_expire(10));    
+    }
+    
     ESP_LOGI(TAG, "Mesh Starting...");
     ESP_ERROR_CHECK(esp_mesh_start());
     ESP_LOGI(TAG, "Getting MAC...");
