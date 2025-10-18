@@ -482,10 +482,15 @@ void on_client_disconnect(void) {
     ESP_LOGI(TAG, "Client disconnected, performing cleanup...");
     // Add custom cleanup logic here
 }
-void web_server_init(void) {
+
+void ap_init(void) {
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
     esp_netif_create_default_wifi_ap();
+    init_wifi();
+}
+
+void web_server_init(void) {
 
     ESP_LOGI(TAG," setting callbacks");
 
@@ -497,8 +502,5 @@ void web_server_init(void) {
     }
     
     register_disconnect_callback(on_client_disconnect);
-
-    init_wifi();
     init_web_server();
-
 }

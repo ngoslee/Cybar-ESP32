@@ -146,8 +146,8 @@ void web_mesh_init(void) {
     wifi_init_softap();
     ESP_LOGI(TAG, "Starting UDP server task...");
     xTaskCreate(udp_server_task, "udp_server", 4096, NULL, 5, NULL);
-    ESP_LOGI(TAG, "Starting web server...");
-    start_webserver();
+  //  ESP_LOGI(TAG, "Starting web server...");
+  //  start_webserver();
 
 }
 

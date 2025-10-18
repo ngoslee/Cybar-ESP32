@@ -58,6 +58,7 @@ void app_main(void)
         ESP_LOGI(TAG, "Mesh node started" );
     } else {
         web_mesh_init();
+        web_server_init();
         ESP_LOGI(TAG, "Web node started" );
     }
 //web_mesh_init();
