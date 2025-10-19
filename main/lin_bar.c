@@ -30,6 +30,8 @@
 #define UART_BUF_SIZE 256
 
 void bar_lin_set_tx_data(uint16_t *data, uint8_t * msg);
+uint8_t bar_diag_handler(void);
+
 static const char *TAG = "LIN_BAR";
 static uint8_t tx_data[TRUCK_TO_BAR_DATA_LEN] = {0}; // Buffer for TX data
 static uint8_t tx_data_shadow[TRUCK_TO_BAR_DATA_LEN] = {0}; // Buffer for TX data
@@ -85,6 +87,10 @@ static void bar_lin_task(void *arg) {
     static uint16_t newValues[6];
     uint16_t values_final[6];
 
+    //handle diag messages first
+    while(bar_diag_handler() != 0) {
+        vTaskDelay(pdMS_TO_TICKS(10));
+    }
 
     while (1) {   
         truck_input(newValues); //updates on new values
@@ -177,4 +183,113 @@ void bar_lin_init(void) {
     ESP_ERROR_CHECK(uart_set_pin(bar_lin_port.uart, bar_lin_port.tx_pin, bar_lin_port.rx_pin, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
     #endif
     xTaskCreate(bar_lin_task, "bar_lin_task", 4096, NULL, 11, NULL);
+}
+
+/*need to handle 3C 3D messages from the truck, either we go full transparent or buffer bar data and send to truck when requested
+  buffer allows pretenting to be a bar without having one connected
+  system works without 3C/3D, but truck throws errors*/
+
+/*bar side:
+Send 3C, get 3D, save response
+
+Truck side, on 3C, set type, on 3D respode with data*/
+/*use state machine to track bar data collection*/
+
+typedef enum {
+    BAR_DIAG_INIT,
+    BAR_DIAG_SEND_3C,
+    BAR_DIAG_SEND_3D,
+    BAR_DIAG_DONE,
+} bar_diag_state_t;
+
+static bar_diag_state_t state = BAR_DIAG_INIT;
+
+#define DIAG_MESG_NUM 6
+
+static uint8_t messageIndex = 0;
+static const uint8_t data_3c_0[8] = {0x81,0x00,0x00,0x0A,0x00,0x00,0x00,0x00};
+static const uint8_t data_3c_1[8] = {0x81,0x00,0x00,0x0A,0x01,0x00,0x00,0x00};
+static const uint8_t data_3c_2[8] = {0x81,0x00,0x00,0x0D,0x00,0x00,0x00,0x00};
+static const uint8_t data_3c_3[8] = {0x81,0x00,0x00,0x0D,0x01,0x00,0x00,0x00};
+static const uint8_t data_3c_4[8] = {0x81,0x00,0x00,0x0D,0x02,0x00,0x00,0x00};
+static const uint8_t data_3c_5[8] = {0x81,0x00,0x00,0x1D,0x00,0x00,0x00,0x00};
+static const lin_msg_t bar_diag_3c[DIAG_MESG_NUM] = {
+    { .id = 0x3C, .len = 8, .data = (uint8_t*)data_3c_0 },
+    { .id = 0x3C, .len = 8, .data = (uint8_t*)data_3c_1 },
+    { .id = 0x3C, .len = 8, .data = (uint8_t*)data_3c_2 },
+    { .id = 0x3C, .len = 8, .data = (uint8_t*)data_3c_3 },
+    { .id = 0x3C, .len = 8, .data = (uint8_t*)data_3c_4 },
+    { .id = 0x3C, .len = 8, .data = (uint8_t*)data_3c_5 }
+};
+
+static  uint8_t data_3d_0[8] = {0x81,0x00,0x01,0x0A,0x00,0x05,0x06,0x00};
+static  uint8_t data_3d_1[8] = {0x81,0x00,0x01,0x0A,0x01,0xA4,0x23,0x00};
+static  uint8_t data_3d_2[8] = {0x81,0x00,0x01,0x0D,0x00,0x00,0x18,0x00};
+static  uint8_t data_3d_3[8] = {0x81,0x00,0x01,0x0D,0x01,0x00,0x01,0x00};
+static  uint8_t data_3d_4[8] = {0x81,0x00,0x01,0x0D,0x02,0x00,0x01,0x00};
+static  uint8_t data_3d_5[8] = {0x81,0x00,0x01,0x1D,0x00,0x01,0x2C,0x00};
+static lin_msg_t bar_diag_3d[DIAG_MESG_NUM] = {
+    { .id = 0x3D, .len = 8, .data = (uint8_t*)data_3d_0 },
+    { .id = 0x3D, .len = 8, .data = (uint8_t*)data_3d_1 },
+    { .id = 0x3D, .len = 8, .data = (uint8_t*)data_3d_2 },
+    { .id = 0x3D, .len = 8, .data = (uint8_t*)data_3d_3 },
+    { .id = 0x3D, .len = 8, .data = (uint8_t*)data_3d_4 },
+    { .id = 0x3D, .len = 8, .data = (uint8_t*)data_3d_5 }
+};
+
+uint8_t bar_diag_handler(void)
+{
+    uint8_t orig_data[8];
+    if (state == BAR_DIAG_DONE) {
+        return 0;
+    }
+
+    switch (state) {
+        case BAR_DIAG_INIT:
+            state = BAR_DIAG_SEND_3C;
+            break;
+        case BAR_DIAG_SEND_3C:
+            lin_tx_frame(bar_lin_port, bar_diag_3c[messageIndex]);
+            //prepare to send 3D
+            state = BAR_DIAG_SEND_3D;
+            break;
+        case BAR_DIAG_SEND_3D:
+            memcpy(orig_data, bar_diag_3d[messageIndex].data, 8); //save original
+            //send 3D and read response
+            if (lin_rx_frame(bar_lin_port, bar_diag_3d[messageIndex]) == 0) {
+                //retry
+                ESP_LOGW(TAG, "Diag 3D RX failed, retrying");
+                state = BAR_DIAG_SEND_3C;
+                break;
+            }
+            if (memcmp(orig_data, bar_diag_3d[messageIndex].data, 8) != 0) {
+                    ESP_LOGW(TAG, "Diag message %d differs: %02X %02X %02X %02X %02X %02X %02X %02X", messageIndex,
+                    bar_diag_3d[messageIndex].data[0], bar_diag_3d[messageIndex].data[1],
+                    bar_diag_3d[messageIndex].data[2], bar_diag_3d[messageIndex].data[3],
+                    bar_diag_3d[messageIndex].data[4], bar_diag_3d[messageIndex].data[5],
+                    bar_diag_3d[messageIndex].data[6], bar_diag_3d[messageIndex].data[7]);
+            }
+            if (messageIndex < (DIAG_MESG_NUM -1)) {
+                messageIndex++;
+                state = BAR_DIAG_SEND_3C;
+            } else {
+                state = BAR_DIAG_DONE;
+                ESP_LOGI(TAG, "Bar diag complete");
+            }
+            break;
+        case BAR_DIAG_DONE:
+            //do nothing
+            return 0;
+            break;
+        default:
+            state = BAR_DIAG_INIT;
+            break;
+    }
+    return 1;
+}    
+
+uint8_t bar_diag_in_progress(void)
+{
+    if (state != BAR_DIAG_DONE) return 1;
+    return 0;
 }
