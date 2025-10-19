@@ -36,7 +36,7 @@ static const char *TAG = "LIN";
 uint8_t lin_calc_checksum(uint8_t pid, uint8_t *data, size_t len) {
     uint16_t sum = pid;
     if ((pid == lin_calc_pid(0x3C)) || (pid == lin_calc_pid(0x3D))) {
-        pid = 0;
+        sum = 0;
     }
     for (size_t i = 0; i < len; i++) {
         sum += data[i];
@@ -162,7 +162,7 @@ uint8_t lin_rx_frame(lin_port_t port, lin_msg_t msg) {
         if (checksum == rx_buf[len - 1]) {
             memcpy(msg.data, rx_buf+3, msg.len);
             worked = true;
-            return len;
+            return msg.len;
         } else {
             ESP_LOGE(TAG, "RX checksum error got %02X expected %02X", rx_buf[len + 4 - 1], checksum);
             return 0;
