@@ -5,11 +5,17 @@
 #include "esp_mac.h"
 #include "freertos/FreeRTOS.h"
 
-#define TRUCK_TO_BAR_ID 0x0A // 8-byte TX
-#define BAR_TO_TRUCK_ID 0x0B // 5-byte RX
+
+typedef enum {
+    LIN_ID_BAR_CMD= 0x0A,
+    LIN_ID_BAR_STATUS = 0x0B,
+    LIN_ID_DIAG_REQ = 0x0C,
+    LIN_ID_DIAG_RESP = 0x0D
+} lin_id_enum_t;
 
 #define TRUCK_TO_BAR_DATA_LEN 8
 #define BAR_TO_TRUCK_DATA_LEN 5
+#define LIN_DIAG_DATA_LEN 8
 
 //uint8_t lin_calc_checksum(uint8_t pid, uint8_t *data, size_t len);
 //uint8_t lin_calc_pid(uint8_t id);

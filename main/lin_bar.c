@@ -47,13 +47,13 @@ static lin_port_t bar_lin_port = { .uart = BAR_LIN_UART_PORT,
 
 static uint8_t rx_data[8]; //max length
 static lin_msg_t bar_tx_msg = {
-        .id = TRUCK_TO_BAR_ID,
+        .id = LIN_ID_BAR_CMD,
         .len = TRUCK_TO_BAR_DATA_LEN,
         .data = tx_data_shadow,
     };
 
 static lin_msg_t bar_rx_msg = {
-        .id = BAR_TO_TRUCK_ID,
+        .id = LIN_ID_BAR_STATUS,
         .len = BAR_TO_TRUCK_DATA_LEN,
         .data = rx_data,
     };  
@@ -291,5 +291,43 @@ uint8_t bar_diag_handler(void)
 uint8_t bar_diag_in_progress(void)
 {
     if (state != BAR_DIAG_DONE) return 1;
+    return 0;
+}
+uint8_t data_3d_response[8];
+uint8_t data_3d_valid = 0;
+
+void bar_handle_truck_3c(uint8_t * data)
+{
+    //search known messages and prepare response
+    //use messageIndex to require live data and prevent race condition
+    //TODO: add timout based on module mode
+    int i;
+    for (i=0; i< messageIndex; i++) {
+        if (memcmp(data, bar_diag_3c[i].data, 8) == 0) {
+            //match found, prepare response
+            memcpy(data_3d_response, bar_diag_3d[i].data, 8);
+            ESP_LOGI(TAG, "Responding with 3D message %d", i);
+            data_3d_valid = 1;
+            return;
+        }
+    }
+    for (; i< DIAG_MESG_NUM; i++) {
+        if (memcmp(data, bar_diag_3c[i].data, 8) == 0) {
+            //match found, prepare response
+            ESP_LOGI(TAG, "Stale 3D message %d not responding", i);
+            data_3d_valid = 0;
+            return;
+        }
+    }
+    ESP_LOGW(TAG, "No known response for 3C message 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X",  data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7]);
+    data_3d_valid = 0;
+}
+
+uint8_t bar_handle_truck_3d(uint8_t * data) {
+    if (data_3d_valid) {
+        memcpy(data, data_3d_response, 8);
+        data_3d_valid = 0;
+        return 1;
+    }
     return 0;
 }

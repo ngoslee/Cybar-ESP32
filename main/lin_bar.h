@@ -23,4 +23,7 @@ void bar_lin_init(void) ;
 //void bar_lin_set_tx_data(uint16_t *data);
 void bar_lin_truck_cmd(uint8_t * cmd) ;
 
+void bar_handle_truck_3c(uint8_t * data);
+uint8_t bar_handle_truck_3d(uint8_t * data);
+
 #endif

@@ -41,14 +41,14 @@ static lin_port_t truck_lin_port = { .uart = TRUCK_LIN_UART_PORT,
 
 static uint8_t rx_data_shadow[TRUCK_TO_BAR_DATA_LEN]; //max length
 static lin_msg_t truck_to_bar_msg = {
-        .id = TRUCK_TO_BAR_ID,
+        .id = LIN_ID_BAR_CMD,
         .len = TRUCK_TO_BAR_DATA_LEN,
         .data = rx_data_shadow,
     };
 
 static uint8_t tx_data_shadow[8+1];
 static lin_msg_t bar_to_truck_msg = {
-        .id = BAR_TO_TRUCK_ID,
+        .id = LIN_ID_BAR_STATUS,
         .len = BAR_TO_TRUCK_DATA_LEN,
         .data = tx_data_shadow,
     };  
@@ -212,15 +212,15 @@ void truck_lin_task(void * arg)
     //                    uart_write_bytes(UART_NUM_0, (uint8_t *)temp_str, temp_len);
 
              //           ESP_LOGI(TAG, "got ID %02x", lin_pid & 0x3f);
-                        switch (lin_pid & 0x3F) {
-                            case TRUCK_TO_BAR_ID:
+                        switch ((lin_id_enum_t) lin_pid & 0x3F) {
+                            case LIN_ID_BAR_CMD:
                                rxByteCount = TRUCK_TO_BAR_DATA_LEN;
                                lin_data_count = 0;
                                if (lin_debug)  uart_write_bytes(UART_NUM_0, "Rx ", 3);
 
                                state = LIN_STATE_WAIT_DATA;
                                break;
-                            case BAR_TO_TRUCK_ID:
+                            case LIN_ID_BAR_STATUS:
                                 //is in a listen only mode, don;t respond, we may receive bar data os the request may go unanswered
                                 if (system_get_lin_mode() == LIN_MODE_LISTEN) {
                                     uart_read_bytes(truck_lin_port.uart, rxBuffer, BAR_TO_TRUCK_DATA_LEN+1, pdMS_TO_TICKS((BAR_TO_TRUCK_DATA_LEN+1)*10*1000/LIN_BAUD_RATE)); //wait on data for expected time
@@ -244,8 +244,39 @@ void truck_lin_task(void * arg)
                        //         ESP_LOGI(TAG, "Checksum is %02X",lin_checksum);    
                                 state = LIN_STATE_WAIT_ECHO;  
                                 break;
+                            case LIN_ID_DIAG_REQ:
+                               rxByteCount = LIN_DIAG_DATA_LEN;
+                               lin_data_count = 0;
+                               if (lin_debug)  uart_write_bytes(UART_NUM_0, "Rx ", 3);
+
+                               state = LIN_STATE_WAIT_DATA;
+                               break;
+                                
+                            case LIN_ID_DIAG_RESP:
+                                if (system_get_lin_mode() == LIN_MODE_LISTEN) {
+                                    uart_read_bytes(truck_lin_port.uart, rxBuffer, LIN_DIAG_DATA_LEN+1, pdMS_TO_TICKS((LIN_DIAG_DATA_LEN+1)*10*1000/LIN_BAUD_RATE)); //wait on data for expected time
+                                    state = LIN_STATE_WAIT_BREAK; //note, really need better break detection
+                                    break;
+                                }
+
+                                if (bar_handle_truck_3d(lin_txDataShadow) == 1)
+                                {
+                                    txByteCount = LIN_DIAG_DATA_LEN;
+                                    lin_checksum = lin_calc_checksum(lin_pid, lin_txDataShadow, txByteCount);
+                                    lin_txDataShadow[txByteCount] = lin_checksum;
+                                    txEchoCount = txByteCount + 1;
+                                    if (lin_debug) uart_write_bytes(UART_NUM_0, "Tx ", 3);
+
+                                    uart_write_bytes(TRUCK_LIN_UART_PORT, lin_txDataShadow, txEchoCount);                                     
+                                    state = LIN_STATE_WAIT_ECHO;  
+                                } else {
+                                    txByteCount = 0;
+                                    state = LIN_STATE_WAIT_BREAK; //ignore
+                                }
+                                break;
+                                
                             default:
-                                ESP_LOGE(TAG, "Unknown ID %02X", lin_pid & 0x3F);
+                                ESP_LOGW(TAG, "Unknown ID %02X", lin_pid & 0x3F);
                                 //temp_len = sprintf(temp_str,"Truck ID: %02X\n", lin_pid & 0x3F);
                               //  spp_send((uint8_t *)temp_str, temp_len);
                                 sniff = true;
@@ -277,10 +308,19 @@ void truck_lin_task(void * arg)
                             //handle received data
                             if (lin_debug) uart_write_bytes(UART_NUM_0, "cs ", 3);
 //                            ESP_LOGI(TAG, "Packet recevied"); 
-                            memcpy(truck_command.bytes, lin_data, 8);
-                            egg_msg_handler(); 
+                            switch (0x3F & lin_pid) {
+                                case LIN_ID_DIAG_REQ:
+                                    bar_handle_truck_3c(lin_data);
+                                    break;
+                                case LIN_ID_BAR_CMD:
+                                    memcpy(truck_command.bytes, lin_data, 8);
+                                    egg_msg_handler();
+                                    break;
+                                default:
+                                    ESP_LOGW(TAG, "Unhandled message id: 0x%02X", 0x3F & lin_pid);
+                                    break;
+                            }
                         }
-
                         state = LIN_STATE_WAIT_BREAK;
                         break;
 
