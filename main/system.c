@@ -16,11 +16,12 @@ typedef struct {
     system_lin_mode_enum_t lin_mode;
     system_node_type_enum_t node_type;
 } system_module_t;
-#define MODULES 3
+#define MODULES 4
 static const system_module_t module[MODULES] = {
-    {"38:18:2B:F1:02:3C", "Charlie", LOAD_MODE_COMBO, LIN_MODE_MIM, NODE_TYPE_WEB},
-    {"38:18:2B:F1:E7:C4", "Larry", LOAD_MODE_LEFT, LIN_MODE_LISTEN, NODE_TYPE_MODULE},
-    {"38:18:2B:F0:A7:08", "Rick", LOAD_MODE_RIGHT, LIN_MODE_LISTEN, NODE_TYPE_MODULE},
+    {"38:18:2B:F1:02:3C", "Charlie", LOAD_MODE_COMBO, LIN_MODE_MIM, NODE_TYPE_WEB}, //truck and user interface
+    {"38:18:2B:F1:E7:C4", "Larry", LOAD_MODE_LEFT, LIN_MODE_LISTEN, NODE_TYPE_MODULE}, //left side lights
+    {"38:18:2B:F0:A7:08", "Rick", LOAD_MODE_RIGHT, LIN_MODE_LISTEN, NODE_TYPE_MODULE}, //right side light
+    {"38:18:2B:F2:25:24", "Ghost", LOAD_MODE_COMBO, LIN_MODE_LISTEN, NODE_TYPE_MODULE}, //isolated lightbar 
  
 };
 
