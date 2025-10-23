@@ -200,6 +200,7 @@ typedef enum {
     BAR_DIAG_SEND_3C,
     BAR_DIAG_SEND_3D,
     BAR_DIAG_DONE,
+    BAR_DIAG_FAILED,
 } bar_diag_state_t;
 
 static bar_diag_state_t state = BAR_DIAG_INIT;
@@ -237,10 +238,15 @@ static lin_msg_t bar_diag_3d[DIAG_MESG_NUM] = {
     { .id = 0x3D, .len = 8, .data = (uint8_t*)data_3d_5 }
 };
 
+#define MAX_RETRIES (2000 / 10) //2 seconds worth
+static uint16_t retries = MAX_RETRIES;
+
 uint8_t bar_diag_handler(void)
 {
+    static bool alerted = false;
+
     uint8_t orig_data[8];
-    if (state == BAR_DIAG_DONE) {
+    if ((state == BAR_DIAG_DONE) || (state == BAR_DIAG_FAILED)) {
         return 0;
     }
 
@@ -258,10 +264,21 @@ uint8_t bar_diag_handler(void)
             //send 3D and read response
             if (lin_rx_frame(bar_lin_port, bar_diag_3d[messageIndex]) == 0) {
                 //retry
-                ESP_LOGW(TAG, "Diag 3D RX failed, retrying");
+                if (--retries == 0) {
+                    ESP_LOGW(TAG,"Bar diagnostic read failed");
+                    messageIndex = DIAG_MESG_NUM; //send canned responses to truck
+                    state = BAR_DIAG_FAILED;
+                    
+                    break;
+                }
+                if (!alerted) {
+                    ESP_LOGW(TAG, "Diag 3D RX failed, retrying");
+                    alerted = true;
+                }
                 state = BAR_DIAG_SEND_3C;
                 break;
             }
+            alerted = false;
             if (memcmp(orig_data, bar_diag_3d[messageIndex].data, 8) != 0) {
                     ESP_LOGW(TAG, "Diag message %d differs: %02X %02X %02X %02X %02X %02X %02X %02X", messageIndex,
                     bar_diag_3d[messageIndex].data[0], bar_diag_3d[messageIndex].data[1],
