@@ -16,6 +16,7 @@
 #include "lwip/sockets.h"
 #include "lwip/netdb.h"
 #include "lin_bar.h"
+#include "password.h"
 
 static const char *TAG = "main_ap";
 static char statuses[1024] = "No statuses yet.";
@@ -127,10 +128,10 @@ static void wifi_init_softap(void) {
     esp_wifi_init(&cfg);
     wifi_config_t wifi_config = {
         .ap = {
-            .ssid = "mesh_ap",
-            .ssid_len = strlen("mesh_ap"),
+            .ssid = WIFI_MESH_AP,
+            .ssid_len = strlen(WIFI_MESH_AP),
             .channel = 6,
-            .password = "password",
+            .password = WIFI_MESH_PW,
             .max_connection = 10,
             .authmode = WIFI_AUTH_WPA2_PSK,
         },
@@ -138,7 +139,7 @@ static void wifi_init_softap(void) {
     esp_wifi_set_mode(WIFI_MODE_AP);
     esp_wifi_set_config(WIFI_IF_AP, &wifi_config);
     esp_wifi_start();
-    ESP_LOGI(TAG, "SoftAP started: SSID=%s, password=%s, IP=%s", "mesh_ap", "password", "192.168.4.1");
+    ESP_LOGI(TAG, "SoftAP started: SSID=%s, password=%s, IP=%s", WIFI_MESH_AP, WIFI_MESH_PW, "192.168.4.1");
     link_up = true;
 }
 void web_mesh_init(void) {
