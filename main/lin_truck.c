@@ -29,7 +29,7 @@ static uint8_t lin_txDataShadow[8 + 1] = {0, 0, 0x60, 0x9D, 0x01, 0, 0, 0, 0};
 static volatile uint8_t lin_txData[8 + 1] = {0, 0, 0x60, 0x9D, 0x01, 0, 0, 0, 0};
 
 static volatile uint8_t lin_txDataEdit = 0;
-
+static bool new_msg = false;
 /*read data is the 0x0A packet
 respode to 0x0B message*/
 QueueHandle_t truck_uart_queue = NULL;
@@ -314,6 +314,7 @@ void truck_lin_task(void * arg)
                                     break;
                                 case LIN_ID_BAR_CMD:
                                     memcpy(truck_command.bytes, lin_data, 8);
+                                    new_msg = true;
                                     egg_msg_handler();
                                     break;
                                 default:
@@ -346,8 +347,11 @@ void truck_lin_task(void * arg)
     vTaskDelete(NULL);
 }
 
-void truck_get_command(uint8_t * data) {
+bool truck_get_command(uint8_t * data) {
+    bool fresh = new_msg;
+    new_msg = false;
     memcpy(data, truck_command.bytes, 8);
+    return fresh;
 }
 
 // Initialize UART and LIN

@@ -42,10 +42,12 @@ void egg_msg_handler(void) {
     lin_bar_command_t diag_cmd, truck_cmd, final_cmd, web_cmd, mesh_cmd;
     memcpy(final_cmd.bytes, cmd_prev.bytes, 8);
 
-    truck_get_command(truck_cmd.bytes);
+    //reset timout on any message
+    if (truck_get_command(truck_cmd.bytes)) {
+        mode_delay = 100;
+    }
     if ( update_if_new(&truck_cmd_prev, &truck_cmd, &final_cmd)) {
         changed  = 1;
-        mode_delay = 100;
    //     ESP_LOGI(TAG, "truck command %d %d %d %d %d %d ", truck_cmd.values.value0, truck_cmd.values.value1, truck_cmd.values.value2, truck_cmd.values.value3, truck_cmd.values.value4, truck_cmd.values.value5);
     }
     if (mode_delay) {
@@ -141,9 +143,9 @@ void egg_msg_handler(void) {
                     }
             }
         }
-        bar_lin_truck_cmd(final_cmd.bytes);
     }
-    
+    //this may not copy, so call every time
+    bar_lin_truck_cmd(final_cmd.bytes);
     if (sequenceActive()) {        
         changed = 6;
     }
