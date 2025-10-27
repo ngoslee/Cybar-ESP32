@@ -98,19 +98,36 @@ position: absolute;
 }
 
 /* Arbitrary positions (adjust as needed based on your image) */
-#btn1 { left: 25%; top: 11%; }
-#btn2 { left: 35%; top: 10%; }
-#btn3 { left: 45%; top: 9%; }
-#btn7 { left: 55%; top: 9%; }
-#btn8 { left: 65%; top: 10%; }
-#btn9 { left: 75%; top: 11%; }
-#btn4 { left: 40%; top: 30%; }
+#btn9 { left: 25%; top: 11%; }
+#btn8 { left: 35%; top: 10%; }
+#btn7 { left: 45%; top: 9%; }
+#btn3 { left: 55%; top: 9%; }
+#btn2 { left: 65%; top: 10%; }
+#btn1 { left: 75%; top: 11%; }
+#btn6 { left: 40%; top: 30%; }
 #btn5 { left: 50%; top: 29%; }
-#btn6 { left: 60%; top: 30%; }
+#btn4 { left: 60%; top: 30%; }
 
-#slider0 {position: absolute;  left: 12%; top:50%; }
-#slider1 {position: absolute;  left: 20%; top:50%; }
-#slider2 {position: absolute;  left: 28%; top:50%; }
-#slider3 {position: absolute;  left: 36%; top:50%; }
-#slider4 {position: absolute;  left: 44%; top:50%; }
-#slider5 {position: absolute;  left: 52%; top:50%; }
+#slider5 {position: absolute;  left: 12%; top:50%; }
+#slider4 {position: absolute;  left: 20%; top:50%; }
+#slider3 {position: absolute;  left: 28%; top:50%; }
+#slider2 {position: absolute;  left: 36%; top:50%; }
+#slider1 {position: absolute;  left: 44%; top:50%; }
+#slider0 {position: absolute;  left: 52%; top:50%; }
+
+.mode-select {
+    position: absolute;
+    color: white;
+    font-size: 24px;
+    padding: 20px 20px;
+    background-color: transparent;
+ 
+}
+.mode-select.on {
+    background-color: blueviolet;
+}
+
+#mode0 { left: 10%; top: 80%;}
+#mode1 { left: 30%; top: 80%;}
+#mode2 { left: 50%; top: 80%;}
+#mode3 { left: 70%; top: 80%;}

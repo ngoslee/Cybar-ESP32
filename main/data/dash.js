@@ -52,7 +52,45 @@ function sendChange(type, id, value) {
             let msg = JSON.stringify({type: type, id: id, value: parseInt(value)});
             ws.send(msg);
             console.log(msg);   
-        }     
+        }  
+    } else if (type == "mode")   {
+        if (id >=0 && id<=3){
+            let ctl = document.getElementById("mode" + (id));
+            let wigwag = document.getElementById("mode1");
+            let seek = document.getElementById("mode2");
+            let scan = document.getElementById("mode3");
+
+            switch (id) {
+                case 0:
+                    wigwag.classList.remove("on");
+                    seek.classList.remove("on");
+                    scan.classList.remove("on");
+                    break;
+                case 1:
+                    wigwag.classList.add("on");
+                    seek.classList.remove("on");
+                    scan.classList.remove("on");
+                    break;
+                case 2:
+                    wigwag.classList.remove("on");
+                    seek.classList.add("on");
+                    scan.classList.remove("on");
+                    break;
+                case 3:
+                    wigwag.classList.remove("on");
+                    seek.classList.remove("on");
+                    scan.classList.add("on");
+                    break;
+                default:
+                    wigwag.classList.remove("on");
+                    seek.classList.remove("on");
+                    scan.classList.remove("on");
+                    break;
+            }
+            let msg = JSON.stringify({type: type, id: id, value: parseInt(value)});
+            ws.send(msg);
+            console.log(msg);   
+        }
     } else {
         console.log("Unhandled");
     }

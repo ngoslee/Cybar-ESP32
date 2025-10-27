@@ -8,15 +8,15 @@
 
 <body>
   <div class="container">
-    <button id="btn1" class="toggle-btn-yellow" onclick='sendChange("btn",1,-1)'>1</button>
-    <button id="btn2" class="toggle-btn-white" onclick='sendChange("btn",2,-1)'>2</button>
-    <button id="btn3" class="toggle-btn-white" onclick='sendChange("btn",3,-1)'>3</button>
-    <button id="btn4" class="toggle-btn-white" onclick='sendChange("btn",4,-1)'>4</button>
-    <button id="btn5" class="toggle-btn-white" onclick='sendChange("btn",5,-1)'>5</button>
-    <button id="btn6" class="toggle-btn-white" onclick='sendChange("btn",6,-1)'>6</button>
-    <button id="btn7" class="toggle-btn-white" onclick='sendChange("btn",7,-1)'>7</button>
-    <button id="btn8" class="toggle-btn-white" onclick='sendChange("btn",8,-1)'>8</button>
-    <button id="btn9" class="toggle-btn-yellow" onclick='sendChange("btn",9,-1)'>9</button>
+    <button id="btn1" class="toggle-btn-yellow" onclick='sendChange("btn",1,-1)'>[]</button>
+    <button id="btn2" class="toggle-btn-white" onclick='sendChange("btn",2,-1)'>[]</button>
+    <button id="btn3" class="toggle-btn-white" onclick='sendChange("btn",3,-1)'>[]</button>
+    <button id="btn4" class="toggle-btn-white" onclick='sendChange("btn",4,-1)'>[]</button>
+    <button id="btn5" class="toggle-btn-white" onclick='sendChange("btn",5,-1)'>[]</button>
+    <button id="btn6" class="toggle-btn-white" onclick='sendChange("btn",6,-1)'>[]</button>
+    <button id="btn7" class="toggle-btn-white" onclick='sendChange("btn",7,-1)'>[]</button>
+    <button id="btn8" class="toggle-btn-white" onclick='sendChange("btn",8,-1)'>[]</button>
+    <button id="btn9" class="toggle-btn-yellow" onclick='sendChange("btn",9,-1)'>[]</button>
 
       <div><input type='range' id='slider0' min='0' max='100' value="0"
           onchange='sendChange("slider",0,this.value)'>
@@ -41,6 +41,11 @@
       <div> <input type='range' id='slider5' min='0' max='100' value='0'
           onchange='sendChange("slider",5,this.value)'>
       </div>
+       <button class="mode-select" id='mode0' onclick='sendChange("mode",0,0)'> </class> Off </button>
+       <button class="mode-select" id='mode1' onclick='sendChange("mode",1,0)'> </class> Wig Wag </button>
+       <button class="mode-select" id='mode2' onclick='sendChange("mode",2,0)'> </class> Seek </button>
+       <button class="mode-select" id='mode3' onclick='sendChange("mode",3,0)'> </class> Scan </button>
+       
 
   </div>
   <script src="dash.js"> </script>

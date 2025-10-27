@@ -23,6 +23,7 @@
 #include "esp_vfs.h"
 #include "esp_spiffs.h"
 #include "password.h"
+#include "patterns.h"
 
 #define FILENAME_LEN 520
 static const char *TAG = "ESP32_WEB_SERVER";
@@ -472,6 +473,24 @@ static esp_err_t ws_handler(httpd_req_t *req) {
                         ESP_LOGD(TAG, "Button");
                         system_load_set(id, value);
                         //mesh handler checks                                                 
+                    } else if (strcmp(type, "mode") == 0) {
+                        switch(id) {
+                            case 0:
+                                sequenceSelect(SEQ_IDLE);
+                                break;
+                            case 1:
+                                sequenceSelect(SEQ_WIG_WAG);
+                                break;
+                            case 2:
+                                sequenceSelect(SEQ_SWEEP);
+                                break;
+                            case 3:
+                                sequenceSelect(SEQ_KITT);
+                                break;
+                            default:
+                                sequenceSelect(SEQ_IDLE);
+                                break;
+                        }
                     }
                 }
             }
