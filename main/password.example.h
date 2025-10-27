@@ -7,6 +7,8 @@
 #define WIFI_AP "ESP32_AP" //Access Point Name (Web server)
 #define WIFI_AP_PASS "Your_Password" //Access point Password (Web server)
 #define WIFI_MESH_AP "mesh_ap_name" //Mesh access point name
-#define WIFI_MESH_PW "Your_Password" //Mesh password
+#define WIFI_MESH_AP_PW "password" //Mesh access point password
+#define WIFI_MESH_ID "MESHID" //Mesh name
+#define WIFI_MESH_PW "mesh_pass" //Mesh password
 
 #endif

@@ -16,6 +16,7 @@
 #include "lin_bar.h"
 #include "egg.h"
 #include "hardware.h"
+#include "password.h"
 
 #define CONFIG_MESH_ROUTE_TABLE_SIZE 10
 
@@ -463,14 +464,14 @@ void mesh_node_init(void) {
 
     mesh_cfg_t mesh_cfg = MESH_INIT_CONFIG_DEFAULT();
     // Mesh ID (6 bytes, arbitrary)
-    memcpy((uint8_t *)&mesh_cfg.mesh_id, "MESHID", 6);
+    memcpy((uint8_t *)&mesh_cfg.mesh_id, WIFI_MESH_ID, 6);
     mesh_cfg.channel = 6; // Match AP channel
     mesh_cfg.mesh_ap.max_connection = 6;
-    memcpy((uint8_t *)&mesh_cfg.mesh_ap.password, "mesh_pass", strlen("mesh_pass"));
+    memcpy((uint8_t *)&mesh_cfg.mesh_ap.password, WIFI_MESH_PW, strlen(WIFI_MESH_PW));
     // Router config (the main AP)
-    mesh_cfg.router.ssid_len = strlen("mesh_ap");
-    memcpy((uint8_t *)&mesh_cfg.router.ssid, "mesh_ap", mesh_cfg.router.ssid_len);
-    memcpy((uint8_t *)&mesh_cfg.router.password, "password", strlen("password"));
+    mesh_cfg.router.ssid_len = strlen(WIFI_MESH_AP);
+    memcpy((uint8_t *)&mesh_cfg.router.ssid, WIFI_MESH_AP, mesh_cfg.router.ssid_len);
+    memcpy((uint8_t *)&mesh_cfg.router.password, WIFI_MESH_AP_PW, strlen(WIFI_MESH_AP_PW));
     ESP_LOGI(TAG, "Mesh initializing...");
     ESP_ERROR_CHECK(esp_mesh_init());
     ESP_ERROR_CHECK(esp_mesh_set_config(&mesh_cfg));
