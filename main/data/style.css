@@ -8,7 +8,7 @@ body {
     position: relative;
     width: 100vw;
     height: 100vh;
-    background: url('/image.jpg') no-repeat center center;
+    background: url('image.jpg') no-repeat center center;
     background-size: cover;
 }
 
@@ -17,8 +17,8 @@ body {
     padding: 10px 20px;
     font-size: 16px;
     cursor: pointer;
-    background-color: gray;
-    color: white;
+    background-color: grey;
+    color: black;
     border: none;
     border-radius: 5px;
     transition: background-color 0.3s;
@@ -28,10 +28,81 @@ body {
     background-color: green;
 }
 
+.toggle-btn-white {
+    position: absolute;
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+    background-color: grey;
+    color: black;
+    border: none;
+    border-radius: 5px;
+    transition: background-color 0.3s;
+}
+
+.toggle-btn-white.on {
+    background-color: white;
+}
+.toggle-btn-white.off {
+    background-color: black;
+    color: white
+}
+
+
+.toggle-btn-yellow {
+    position: absolute;
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+    background-color: darkgoldenrod;
+    color: black;
+    border: none;
+    border-radius: 5px;
+    transition: background-color 0.3s;
+}
+
+.toggle-btn-yellow.on {
+    background-color: yellow;
+}
+
+.toggle-btn-yellow.off {
+    background-color: black;
+    color: yellow
+}
+
+
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f0f0f0;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    overflow-x: auto;
+}
+.indicator {width:20px; height:20px; background:red; display:inline-block; vertical-align:middle;}
+
+input[type='range'] {
+width:200px !important;
+height:50px !important;
+orientation: vertical !important;
+-webkit-appearance: slider-vertical !important;
+writing-mode: bt-lr !important;
+transform: rotate(270deg);
+transform-origin: center;
+margin: 5px 0;
+}
+
+.slider-container {display: flex; flex-direction: column; align-items: center; gap: 5px; width: 50px; height: 500px;}
+
 /* Arbitrary positions (adjust as needed based on your image) */
-#btn1 { left: 100px; top: 200px; }
-#btn2 { left: 300px; top: 400px; }
-#btn3 { left: 500px; top: 100px; }
-#btn4 { left: 700px; top: 300px; }
-#btn5 { left: 900px; top: 500px; }
-#btn6 { left: 1100px; top: 200px; }
+#btn1 { left: 160px; top: 70px; }
+#btn2 { left: 220px; top: 60px; }
+#btn3 { left: 280px; top: 50px; }
+#btn7 { left: 340px; top: 50px; }
+#btn8 { left: 400px; top: 60px; }
+#btn9 { left: 460px; top: 70px; }
+#btn4 { left: 230px; top: 370px; }
+#btn5 { left: 315px; top: 370px; }
+#btn6 { left: 400px; top: 370px; }

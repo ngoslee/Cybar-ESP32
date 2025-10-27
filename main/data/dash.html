@@ -1,76 +1,61 @@
-    <html><head>
-    <meta name='viewport' content='width=device-width, initial-scale=1'>
-    <link rel="stylesheet" href="/style.css">
-    <style>
-    body {
-    font-family: Arial, sans-serif;
-    background-color: #f0f0f0;
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: center;
-    gap: 5px;
-    overflow-x: auto;
-    }
-    .indicator {width:20px; height:20px; background:red; display:inline-block; vertical-align:middle;}
+<!DOCTYPE html>
+<html>
 
-    input[type='range'] {
-    width:200px !important;
-    height:50px !important;
-    orientation: vertical !important;
-    -webkit-appearance: slider-vertical !important;
-    writing-mode: bt-lr !important;
-    transform: rotate(270deg);
-    transform-origin: center;
-    margin: 5px 0;
-    }
-    .slider-container {display: flex; flex-direction: column; align-items: center; gap: 5px; width: 50px; height: 500px;}
-    </style></head>
+<head>
+  <meta name='viewport' content='width=device-width, initial-scale=1'>
+  <link rel="stylesheet" href="style.css">
+</head>
 
-    <body>
-    <h1>Control Panel</h1>
-    <div class="container">
+<body>
+  <div class="container">
+    <button id="btn1" class="toggle-btn-yellow" onclick='sendChange("btn",1,-1)'>1</button>
+    <button id="btn2" class="toggle-btn-white" onclick='sendChange("btn",2,-1)'>2</button>
+    <button id="btn3" class="toggle-btn-white" onclick='sendChange("btn",3,-1)'>3</button>
+    <button id="btn4" class="toggle-btn-white" onclick='sendChange("btn",4,-1)'>4</button>
+    <button id="btn5" class="toggle-btn-white" onclick='sendChange("btn",5,-1)'>5</button>
+    <button id="btn6" class="toggle-btn-yellow" onclick='sendChange("btn",6,-1)'>6</button>
+    <button id="btn7" class="toggle-btn-white" onclick='sendChange("btn",7,-1)'>7</button>
+    <button id="btn8" class="toggle-btn-white" onclick='sendChange("btn",8,-1)'>8</button>
+    <button id="btn9" class="toggle-btn-white" onclick='sendChange("btn",9,-1)'>9</button>
+
     <div class='slider-container'>
-        <div>Slider 0: <input type='range' id='slider0' min='0' max='100' value='0' onchange='sendChange("slider",0,this.value)'> 
-        <div class='indicator' id='ind0'></div></div><br>
+      <div>Slider 0: <input type='range' id='slider0' min='0' max='100' value='0'
+          onchange='sendChange("slider",0,this.value)'>
+        <div class='indicator' id='ind0'></div>
+      </div><br>
     </div>
     <div class='slider-container'>
-      <div>Slider 1: <input type='range' id='slider1' min='0' max='100' value='0' onchange='sendChange("slider",1,this.value)'>
-         <div class='indicator' id='ind1'></div></div><br>
+      <div>Slider 1: <input type='range' id='slider1' min='0' max='100' value='0'
+          onchange='sendChange("slider",1,this.value)'>
+        <div class='indicator' id='ind1'></div>
+      </div><br>
     </div>
     <div class='slider-container'>
-       <div>Slider 2: <input type='range' id='slider2' min='0' max='100' value='0' onchange='sendChange("slider",2,this.value)'>
-         <div class='indicator' id='ind2'></div></div><br>
+      <div>Slider 2: <input type='range' id='slider2' min='0' max='100' value='0'
+          onchange='sendChange("slider",2,this.value)'>
+        <div class='indicator' id='ind2'></div>
+      </div><br>
     </div>
     <div class='slider-container'>
-      <div>Slider 3: <input type='range' id='slider3' min='0' max='100' value='0' onchange='sendChange("slider",3,this.value)'>
-         <div class='indicator' id='ind3'></div></div><br>
+      <div>Slider 3: <input type='range' id='slider3' min='0' max='100' value='0'
+          onchange='sendChange("slider",3,this.value)'>
+        <div class='indicator' id='ind3'></div>
+      </div><br>
     </div>
     <div class='slider-container'>
-      <div>Slider 4: <input type='range' id='slider4' min='0' max='100' value='0' onchange='sendChange("slider",4,this.value)'>
-         <div class='indicator' id='ind4'></div></div><br>
+      <div>Slider 4: <input type='range' id='slider4' min='0' max='100' value='0'
+          onchange='sendChange("slider",4,this.value)'>
+        <div class='indicator' id='ind4'></div>
+      </div><br>
     </div>
     <div class='slider-container'>
-       <div>Slider 5: <input type='range' id='slider5' min='0' max='100' value='0' onchange='sendChange("slider",5,this.value)'>
-         <div class='indicator' id='ind5'></div></div><br>
+      <div>Slider 5: <input type='range' id='slider5' min='0' max='100' value='0'
+          onchange='sendChange("slider",5,this.value)'>
+        <div class='indicator' id='ind5'></div>
+      </div><br>
     </div>
-</div>
-    <script>
-    var ws = new WebSocket('ws://' + location.host + '/ws');
-    function sendChange(type, id, value) {
-     ws.send(JSON.stringify({type: type, id: id, value: parseInt(value)}));
-    }
-    ws.onmessage = function(evt) {
-     var data = JSON.parse(evt.data);
-     if (data.type === 'set_slider') {
-     document.getElementById('slider' + data.id).value = data.value;
-     } else if (data.type === 'set_switch') {
-     document.getElementById('switch' + data.id).checked = data.value > 0;
-     } else if (data.type === 'set_indicator') {
-     document.getElementById('ind' + data.id).style.opacity = data.value / 100;
-     }
-    };
-    ws.onclose = function() {
-     console.log('WebSocket connection closed');
-    };
-    </script></body></html>;
+  </div>
+  <script src="dash.js"> </script>
+</body>
+
+</html>;

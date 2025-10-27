@@ -17,6 +17,7 @@
 #include "egg.h"
 #include "hardware.h"
 #include "password.h"
+#include "system.h"
 
 #define CONFIG_MESH_ROUTE_TABLE_SIZE 10
 
@@ -517,6 +518,21 @@ void message_handler(const char *msg) {
     mesh_lin_cmd.values.value3 = value[3] <= 100? value[3]:0;
     mesh_lin_cmd.values.value4 = value[4] <= 100? value[4]:0;
     mesh_lin_cmd.values.value5 = value[5] <= 100? value[5]:0;
+
+    char* rest;
+    char* token, *load_vals;
+    int16_t id =0;
+    if ((load_vals = strstr(msg, "LOAD")) != NULL) {
+        load_vals += sizeof("LOAD");
+        rest = load_vals;
+        while (((token = strtok_r(rest, " ", &rest)) != NULL) && (id < LOAD_COUNT)) {
+            int16_t value = atoi(token);
+            system_load_set(id, value);
+            id ++;
+        }
+        if ((id >0 ) && (id< LOAD_COUNT)) ESP_LOGW(TAG, "%d load values received", id);
+        ESP_LOGD(TAG, "%d %d %d %d %d %d %d %d %d ", system_load_get(0), system_load_get(1), system_load_get(2), system_load_get(3), system_load_get(4), system_load_get(5), system_load_get(6), system_load_get(7), system_load_get(8));
+    }
 
     lin_mode = mode;
     egg_msg_handler();

@@ -163,5 +163,9 @@ void mesh_update(bool override, lin_bar_command_t * newValues) {
     } else {
         len = sprintf(temp, "LIN %d %d %d %d %d %d", newValues->values.value0, newValues->values.value1, newValues->values.value2, newValues->values.value3, newValues->values.value4, newValues->values.value5);
     }
+    len += sprintf(temp + len, " LOAD");
+    for (int i=0; i< LOAD_COUNT; i++ ) {
+        len += sprintf(temp + len, " %d", system_load_get(i));
+    }
     send_to_mesh(temp, len);
 }   
