@@ -1,6 +1,6 @@
 'use strict';
 var ws = new WebSocket('ws://' + location.host + '/ws');
-let btn_states = new Array(6).fill(-1);
+let btn_states = new Array(9).fill(-1);
 
 function sendChange(type, id, value) {
     console.log('sendChange event %s %d %d', type, id, value);
@@ -47,6 +47,14 @@ function sendChange(type, id, value) {
             ws.send(msg);
             console.log(msg)
         }
+    } else if (type == "slider") {
+        if (id >=0 && id <6) {
+            let msg = JSON.stringify({type: type, id: id, value: parseInt(value)});
+            ws.send(msg);
+            console.log(msg);   
+        }     
+    } else {
+        console.log("Unhandled");
     }
 }
 ws.onmessage = function(evt) {
