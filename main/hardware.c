@@ -308,41 +308,86 @@ void adc_init(void) {
 }
 
 
-//turn normal command into external load vlaues
+//turn normal command into external load values
+//use load overrides 1 = on, 0 = off, -1 = ignore
+
 void hw_load_set_cmd(uint8_t * data) {
     static uint8_t prev_data[8];
+    static uint8_t load_states[3] = {0};
+    int16_t load_override[3] = {-1};
+    system_load_mode_enum_t mode = system_get_load_mode();
     lin_bar_command_t cmd;
     if (memcmp(prev_data, data, 8)) {
         memcpy(cmd.bytes, data, 8 );
         memcpy(prev_data, data, 8 );
-        system_load_mode_enum_t mode = system_get_load_mode();
-        switch (mode)
-        {
-        case LOAD_MODE_COMBO:
-            hardawre_load_set_state(HW_LOAD_1, cmd.values.value0 > 0?1:0);
-            uint16_t combine = 0;
-            if ((cmd.values.value1 > 0) || (cmd.values.value2 > 0) || (cmd.values.value3 > 0) || (cmd.values.value4 > 0)) combine = 1;
-            hardawre_load_set_state(HW_LOAD_2, combine > 0?1:0);
-            hardawre_load_set_state(HW_LOAD_3, cmd.values.value5 > 0?1:0);        
-            break;
-        case LOAD_MODE_LEFT:
-            hardawre_load_set_state(HW_LOAD_1, cmd.values.value0 > 0?1:0);
-            hardawre_load_set_state(HW_LOAD_2, cmd.values.value1 > 0?1:0);
-            hardawre_load_set_state(HW_LOAD_3, cmd.values.value2 > 0?1:0);        
-            break;
-        case LOAD_MODE_RIGHT:
-            hardawre_load_set_state(HW_LOAD_1, cmd.values.value3 > 0?1:0);
-            hardawre_load_set_state(HW_LOAD_2, cmd.values.value4 > 0?1:0);
-            hardawre_load_set_state(HW_LOAD_3, cmd.values.value5 > 0?1:0);        
-            break;
-        case LOAD_MODE_OFF:
-        // no action
-//            hardawre_load_set_state(HW_LOAD_1, 0);
-//            hardawre_load_set_state(HW_LOAD_2, 0);
-//            hardawre_load_set_state(HW_LOAD_3, 0);        
-            break;        
-        default:
-            break;
+       
+        switch (mode) {
+            case LOAD_MODE_COMBO:
+                load_states[0] = cmd.values.value0 > 0?1:0;
+                uint16_t combine = 0;
+                if ((cmd.values.value1 > 0) || (cmd.values.value2 > 0) || (cmd.values.value3 > 0) || (cmd.values.value4 > 0)) combine = 1;
+                load_states[1] = combine > 0?1:0;
+                load_states[2] = cmd.values.value5 > 0?1:0;        
+                break;
+
+            case LOAD_MODE_LEFT:
+                load_states[0] = cmd.values.value0 > 0?1:0;
+                load_states[1] = cmd.values.value1 > 0?1:0;
+                load_states[2] = cmd.values.value2 > 0?1:0;        
+                break;
+
+            case LOAD_MODE_RIGHT:
+                load_states[0] =  cmd.values.value3 > 0?1:0;
+                load_states[1] =  cmd.values.value4 > 0?1:0;
+                load_states[2] =  cmd.values.value5 > 0?1:0;        
+                break;
+
+            case LOAD_MODE_OFF:
+                load_states[0] = 0;
+                load_states[1] = 0;
+                load_states[2] = 0;        
+                break;
+
+            default:
+                break;
         }
     }
+    switch (mode) {
+        case LOAD_MODE_LEFT:
+            load_override[0] = system_load_get(0);
+            load_override[1] = system_load_get(1);
+            load_override[2] = system_load_get(2);
+            break;
+
+        case LOAD_MODE_COMBO:
+            load_override[0] = system_load_get(3);
+            load_override[1] = system_load_get(4);
+            load_override[2] = system_load_get(5);
+            break;
+
+        case LOAD_MODE_RIGHT:
+            load_override[0] = system_load_get(6);
+            load_override[1] = system_load_get(7);
+            load_override[2] = system_load_get(8);
+            break;
+
+        case LOAD_MODE_OFF:
+            load_override[0] = 0;
+            load_override[1] = 0;
+            load_override[2] = 0;
+            break;
+        default:
+            break;
+
+    }
+
+    for (int i = 0; i< 3; i++) {
+        if (load_override[i] == -1) {
+            load_override[i] = load_states[i];
+        }
+    }
+
+    hardawre_load_set_state(HW_LOAD_1, load_override[0] > 0?1:0);
+    hardawre_load_set_state(HW_LOAD_2, load_override[1] > 0?1:0);
+    hardawre_load_set_state(HW_LOAD_3, load_override[2] > 0?1:0);        
 }

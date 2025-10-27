@@ -455,7 +455,7 @@ static esp_err_t ws_handler(httpd_req_t *req) {
                 if (id_item && value_item && cJSON_IsNumber(id_item) && cJSON_IsNumber(value_item)) {
                     int id = id_item->valueint;
                     int value = value_item->valueint;
-                    ESP_LOGI(TAG, "tpye: %s id:%d value:%d", type, id, value);
+                    ESP_LOGI(TAG, "type: %s id:%d value:%d", type, id, value);
                     if (strcmp(type, "slider") == 0 && id >= 0 && id < 6) {
                         ESP_LOGI(TAG,"Slider");
                         slider_values[id] = value;
@@ -468,6 +468,10 @@ static esp_err_t ws_handler(httpd_req_t *req) {
                         if (switch_callbacks[id]) {
                             switch_callbacks[id](id, switch_states[id]);
                         }
+                    } else if (strcmp(type, "btn") == 0) {
+                        ESP_LOGD(TAG, "Button");
+                        system_load_set(id, value);
+                        //mesh handler checks                                                 
                     }
                 }
             }
@@ -575,7 +579,7 @@ esp_err_t init_web_server(void) {
         httpd_register_uri_handler(web_server, &css_uri);
 
         httpd_uri_t js_uri = {
-            .uri = "/script.js",
+            .uri = "/dash.js",
             .method = HTTP_GET,
             .handler = file_get_handler
         };

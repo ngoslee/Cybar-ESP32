@@ -24,6 +24,7 @@ static const system_module_t module[MODULES] = {
     {"38:18:2B:F2:25:24", "Ghost", LOAD_MODE_COMBO, LIN_MODE_LISTEN, NODE_TYPE_MODULE}, //isolated lightbar 
  
 };
+static int16_t system_load_states[LOAD_COUNT]= {-1};
 
 void system_set_load_mode(system_load_mode_enum_t mode)
 {
@@ -61,6 +62,20 @@ void system_set_node_type(system_node_type_enum_t type)
     if (type >= NODE_TYPE_NUM) type = NODE_TYPE_WEB;
     node_type = type;
 }
+
+void system_load_set(uint16_t id, int16_t value) {
+    if (id>=0 && id< LOAD_COUNT) {
+        system_load_states[id] = value;
+    }
+}
+
+int16_t system_load_get(uint16_t id) {
+    if (id>=0 && id< LOAD_COUNT) {
+        return system_load_states[id];
+    }
+    return -1;
+}
+
 
 void system_init(void)
 {

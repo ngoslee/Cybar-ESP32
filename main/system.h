@@ -4,6 +4,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#define LOAD_COUNT 9
+
 typedef enum {
     LOAD_MODE_OFF = 0,
     LOAD_MODE_LEFT = 1,
@@ -35,5 +37,7 @@ system_lin_mode_enum_t system_get_lin_mode(void);
 char * system_get_name(void);
 void system_init(void);
 
+void system_load_set(uint16_t id, int16_t value);
+int16_t system_load_get(uint16_t id);
 
 #endif
